@@ -19,7 +19,7 @@ public class SecurityConfig {
     private final CF_DuelProject.CF_DuelProject.config.JwtFilter jwtFilter;
 
     SecurityConfig(CF_DuelProject.CF_DuelProject.config.JwtFilter jwtFilter,
-                   CF_DuelProject.CF_DuelProject.service.JwtService jwtService) {
+            CF_DuelProject.CF_DuelProject.service.JwtService jwtService) {
         this.jwtFilter = jwtFilter;
         this.jwtService = jwtService;
     }
@@ -39,38 +39,36 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           OAuth2SuccessHandler handler) throws Exception {
+            OAuth2SuccessHandler handler) throws Exception {
 
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
 
-            
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**", "/oauth2/**", "/login/**", "/ws/**", "/api/match/**").permitAll()
+                        .anyRequest().authenticated())
 
-            .authorizeHttpRequests(auth -> auth
-.requestMatchers("/auth/**", "/oauth2/**", "/login/**", "/ws/**", "/api/match/**").permitAll()                .anyRequest().authenticated()
-            )
+                .oauth2Login(oauth -> oauth
+                        .successHandler(handler))
+                .oauth2Login(oauth -> oauth
+                        .successHandler(handler)
+                        .failureHandler((req, res, ex) -> {
+                            System.out.println("OAuth2 failure: " + ex.getMessage());
+                            String frontendUrl = System.getenv("FRONTEND_URL");
+                            if (frontendUrl == null || frontendUrl.isEmpty())
+                                frontendUrl = "http://localhost:5173";
+                            res.sendRedirect(frontendUrl + "/login");
+                        }))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, exx) -> {
+                            res.setStatus(401);
+                            res.getWriter().write("Unauthorized");
+                        }))
 
-            .oauth2Login(oauth -> oauth
-                .successHandler(handler)
-            )
-            .oauth2Login(oauth -> oauth
-            .successHandler(handler)
-            .failureHandler((req, res, ex) -> {
-                System.out.println("OAuth2 failure: " + ex.getMessage());
-                res.sendRedirect("http://localhost:5173/login");
-            })
-        )
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((req, res, exx) -> {
-                    res.setStatus(401);
-                    res.getWriter().write("Unauthorized");
-                })
-            )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-            
         return http.build();
     }
 
