@@ -56,9 +56,9 @@ public class SecurityConfig {
 
                 .csrf(csrf -> csrf.disable())
 
-                // ✅ STATELESS — we use JWT, no server-side HTTP sessions
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Removed STATELESS session policy because Spring Security OAuth2 requires 
+                // temporary sessions to store the 'state' parameter during the Google redirect flow.
+                // We still use JWT for API authentication.
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/oauth2/**", "/login/**", "/ws/**").permitAll()
