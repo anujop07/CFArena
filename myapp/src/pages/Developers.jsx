@@ -42,8 +42,8 @@ const DEVELOPERS = [
     desc: "Passionate about building scalable backend systems and competitive programming."
   },
   {
-    name: "Developer 2",
-    role: "Frontend Architect",
+    name: "Developer Queen Manasvi don",
+    role: "allover Architect",
     img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ffdfbf",
     desc: "Loves creating smooth, pixel-perfect user interfaces and intense animations."
   },
@@ -67,7 +67,7 @@ export default function Developers() {
       <style>{css}</style>
       <div className="dev-page">
         <Navbar />
-        
+
         <main className="dev-main">
           <div className="dev-header">
             <h1 className="dev-title">Meet the <em>Creators</em></h1>
