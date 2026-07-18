@@ -8,11 +8,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.Collections;
 
 @Component
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
@@ -44,7 +46,7 @@ public class JwtFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // ✅ Just clear context, don't rethrow — let security handle 401
             SecurityContextHolder.clearContext();
-            System.out.println("JWT Filter error: " + e.getMessage()); // see what's failing
+            log.warn("JWT Filter error: {}", e.getMessage());
         }
 
         // ✅ ALWAYS call this, even if token is invalid

@@ -16,7 +16,7 @@ const css = `
   .db-title { font-family: 'Syne', sans-serif; font-size: clamp(32px, 5vw, 56px); font-weight: 800; letter-spacing: -0.02em; text-align: center; line-height: 1; margin-bottom: 8px; }
   .db-subtitle { font-size: 17px; color: #777; letter-spacing: 0.1em; text-align: center; margin-bottom: 52px; }
 
-  .db-actions { display: flex; gap: 16px; width: 100%; max-width: 640px; margin-bottom: 36px; }
+  .db-actions { display: flex; gap: 16px; width: 100%; max-width: 900px; margin-bottom: 36px; }
 
   .db-action-card { flex: 1.5; border: 1px solid #1e1e1e; background: #0d0d0d; padding: 60px 32px 48px; display: flex; flex-direction: column; align-items: center; cursor: crosshair; transition: border-color .2s, background .2s; position: relative; overflow: hidden; }
   .db-action-card::before {
@@ -32,7 +32,7 @@ const css = `
   .db-action-card:hover::before { opacity: 1; }
 
   .db-action-icon { font-size: 34px; margin-bottom: 14px; line-height: 1; }
-  .db-action-label { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 8px; text-transform: uppercase; }
+  .db-action-label { font-family: 'Syne', sans-serif; font-size: clamp(16px, 1.8vw, 22px); font-weight: 800; letter-spacing: 0.04em; margin-bottom: 8px; text-transform: uppercase; word-break: break-word; text-align: center; width: 100%; }
   .db-action-desc { font-size: 15px; color: #888; letter-spacing: 0.04em; text-align: center; line-height: 1.7; margin-bottom: 28px; }
 
   .db-cta { width: 100%; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #0a0a0a; background: #c8ff00; border: none; padding: 13px; border-radius: 2px; cursor: crosshair; transition: opacity .15s, transform .1s; position: relative; z-index: 1; }
@@ -159,6 +159,15 @@ export default function Dashboard() {
               <p className="db-action-desc">Have a code? Enter it and jump straight into the fight.</p>
               <button className="db-cta-ghost" onClick={() => setModal('join')}>
                 Join Match
+              </button>
+            </div>
+
+            <div className="db-action-card">
+              <div className="db-action-icon">🏆</div>
+              <div className="db-action-label">Tournaments</div>
+              <p className="db-action-desc">Compete in bracket-style arenas. Create or join tournaments.</p>
+              <button className="db-cta-ghost" onClick={() => navigate('/tournaments')}>
+                View Tournaments
               </button>
             </div>
           </div>

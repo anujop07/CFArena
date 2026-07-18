@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.mongodb.client.result.UpdateResult;
 
@@ -21,6 +20,8 @@ import CF_DuelProject.CF_DuelProject.repository.SecondaryMatchRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.LinkedHashMap;
+import java.security.SecureRandom;
+import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MatchService {
 
     private final PrimaryMatchRepository matchRepository;
@@ -41,7 +43,7 @@ public class MatchService {
 
     // 📡 WebSocket: publish match update to frontend
     private void publishMatchUpdate(MatchPrimary match) {
-        System.out.println("📡 WebSocket SEND → /topic/match/" + match.getId() + " | Score: " + match.getScore1() + "-" + match.getScore2());
+        log.debug("📡 WebSocket SEND → /topic/match/{} | Score: {}-{}", match.getId(), match.getScore1(), match.getScore2());
         messagingTemplate.convertAndSend("/topic/match/" + match.getId(), match);
         // Also publish to invite code topic so clients can subscribe by invite code
         if (match.getInviteCode() != null) {
@@ -67,7 +69,7 @@ public class MatchService {
 
         String problem = match.getProblems().get(idx);
 
-        System.out.println("Checking Problem: " + problem);
+        log.debug("Checking Problem: {}", problem);
 
         SolveResult result = checkSolve(
                 match.getUser1(),
@@ -77,12 +79,12 @@ public class MatchService {
         );
 
         if (result == null) {
-            System.out.println("No one solved yet");
+            log.debug("No one solved yet");
             return;
         }
 
         String winner = result.getWinner();
-        System.out.println("Winner: " + winner);
+        log.debug("Winner: {}", winner);
 
         // 🔥 ATOMIC UPDATE
         boolean success = tryUpdateMatch(
@@ -93,14 +95,14 @@ public class MatchService {
         );
 
         if (success) {
-            System.out.println("✅ Winner locked: " + winner);
+            log.debug("✅ Winner locked: {}", winner);
             // 📡 Fetch latest and publish via WebSocket
             MatchPrimary latest = matchRepository.findById(match.getId()).orElse(null);
             if (latest != null) {
                 publishMatchUpdate(latest);
             }
         } else {
-            System.out.println("❌ Race lost");
+            log.debug("❌ Race lost");
         }
     }
 
@@ -145,15 +147,14 @@ public class MatchService {
         return result.getModifiedCount() > 0;
     }
 
-    // @Transactional
-private void finishMatch(String matchId) {
+    private void finishMatch(String matchId) {
 
         MatchPrimary match = matchRepository.findById(matchId).orElse(null);
         if (match == null) return;
 
         if ("FINISHED".equals(match.getStatus())) return;
 
-        System.out.println("🏁 Match Finished: " + match.getId());
+        log.debug("🏁 Match Finished: {}", match.getId());
 
         String winner;
         if (match.getScore1() > match.getScore2()) {
@@ -199,7 +200,8 @@ private void finishMatch(String matchId) {
         StringBuilder code = new StringBuilder();
 
         for (int i = 0; i < 6; i++) {
-            int idx = (int)(Math.random() * chars.length());
+            SecureRandom random = new SecureRandom();
+            int idx = random.nextInt(chars.length());
             code.append(chars.charAt(idx));
         }
 
@@ -365,4 +367,73 @@ private void finishMatch(String matchId) {
                 .toList();
     }
 
+
+    // Safe version of getMatchStatus — returns null instead of throwing (used by TournamentScheduler)
+    public Map<String, Object> getMatchStatusSafe(String inviteCode) {
+        try {
+            return getMatchStatus(inviteCode);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void handleSkipVote(String inviteCode, String cfHandle) {
+
+        MatchPrimary match = matchRepository.findByInviteCode(inviteCode.trim())
+                .orElseThrow(() -> new RuntimeException("Match not found: " + inviteCode));
+
+        if (!"ONGOING".equals(match.getStatus())) {
+            log.debug("Skip vote ignored — match is not ONGOING");
+            return;
+        }
+
+        int idx = match.getCurIdx();
+        if (idx >= match.getProblems().size()) {
+            log.debug("Skip vote ignored — no more problems");
+            return;
+        }
+
+        // Determine which player is voting
+        boolean isUser1 = cfHandle.equalsIgnoreCase(match.getUser1());
+        boolean isUser2 = cfHandle.equalsIgnoreCase(match.getUser2());
+
+        if (!isUser1 && !isUser2) {
+            log.debug("Skip vote ignored — sender is not a player in this match");
+            return;
+        }
+
+        if (isUser1) match.setSkipVoteUser1(true);
+        if (isUser2) match.setSkipVoteUser2(true);
+
+        // Check if both players have voted
+        if (match.isSkipVoteUser1() && match.isSkipVoteUser2()) {
+            log.debug("⏭ Both players voted to skip problem {}", idx);
+
+            // Mark both results as SKIPPED for this problem
+            match.getPlayer1Results().put(idx, "SKIPPED");
+            match.getPlayer2Results().put(idx, "SKIPPED");
+
+            // Advance to next problem
+            match.setCurIdx(idx + 1);
+
+            // Reset skip votes for the next problem
+            match.setSkipVoteUser1(false);
+            match.setSkipVoteUser2(false);
+
+            matchRepository.save(match);
+            publishMatchUpdate(match);
+        } else {
+            // Only one player voted so far — save and broadcast so opponent sees the vote
+            log.debug("⏳ {} voted to skip. Waiting for opponent...", cfHandle);
+            matchRepository.save(match);
+
+            // Broadcast updated skip vote state via the skip topic
+            Map<String, Object> skipNotification = new LinkedHashMap<>();
+            skipNotification.put("inviteCode", inviteCode);
+            skipNotification.put("voter", cfHandle);
+            skipNotification.put("skipVoteUser1", match.isSkipVoteUser1());
+            skipNotification.put("skipVoteUser2", match.isSkipVoteUser2());
+            messagingTemplate.convertAndSend("/topic/match/" + inviteCode + "/skip", skipNotification);
+        }
+    }
 }

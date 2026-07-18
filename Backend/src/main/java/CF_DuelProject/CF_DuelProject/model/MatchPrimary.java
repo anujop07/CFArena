@@ -33,4 +33,9 @@ public class MatchPrimary {
     private Map<Integer, String> player1Results = new HashMap<>();
     private Map<Integer, String> player2Results = new HashMap<>();
 
+    private boolean skipVoteUser1;
+    private boolean skipVoteUser2;
+
+    private String tournamentId;
+    private Integer bracketRound;
 }

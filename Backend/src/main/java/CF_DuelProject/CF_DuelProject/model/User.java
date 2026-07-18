@@ -20,4 +20,6 @@ public class User {
 
     private String cfHandle;
 
+    // ✅ Role-based access control — set manually in DB for admin users
+    private boolean admin = false;
 }

@@ -1,0 +1,35 @@
+# ─── Exclude everything that doesn't belong in the Docker build context ─────────
+
+# Git history — never needed in Docker
+.git
+.gitignore
+.gitattributes
+
+# IDE / editor files
+.vscode
+.idea
+*.iml
+*.iws
+*.ipr
+
+# Maven compiled output — Stage 1 will rebuild this
+target/
+
+# Maven wrapper jar (we use the script, not the jar)
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment / secrets — NEVER in Docker build context
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# Documentation
+README.md
+HELP.md
+*.md
+
+# OS junk
+.DS_Store
+Thumbs.db

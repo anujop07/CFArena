@@ -10,6 +10,11 @@ import MatchRoom from './pages/match/MatchRoom'
 import Results from './pages/match/Results'
 import History from './pages/match/History'
 
+import TournamentList from './pages/tournament/TournamentList'
+import TournamentCreate from './pages/tournament/TournamentCreate'
+import TournamentBracket from './pages/tournament/TournamentBracket'
+import Developers from './pages/Developers'
+
 import { useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
 
@@ -135,6 +140,41 @@ function App() {
             </ProtectedRoute>
           }
         /> 
+
+        <Route
+          path="/developers"
+          element={
+            <ProtectedRoute>
+              <Developers />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🏆 Tournament Routes */}
+        <Route
+          path="/tournaments"
+          element={
+            <ProtectedRoute>
+              <TournamentList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tournament/create"
+          element={
+            <ProtectedRoute>
+              <TournamentCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tournament/:id"
+          element={
+            <ProtectedRoute>
+              <TournamentBracket />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 🔁 Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

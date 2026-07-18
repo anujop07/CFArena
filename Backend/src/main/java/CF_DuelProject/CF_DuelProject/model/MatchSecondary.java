@@ -33,4 +33,8 @@ public class MatchSecondary {
     private Map<Integer, String> player1Results = new HashMap<>();
     private Map<Integer, String> player2Results = new HashMap<>();
 
+    // Tournament link (null for normal duels)
+    private String tournamentId;
+    private int bracketRound;
+
 }

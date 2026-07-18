@@ -47,12 +47,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-client</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
+		<!-- devtools removed: NOT for production -->
 		<!-- JWT API -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -91,13 +86,21 @@
 		<artifactId>spring-boot-starter-websocket</artifactId>
 	</dependency>
 
+
 	<dependency>
 		<groupId>com.bucket4j</groupId>
 		<artifactId>bucket4j-core</artifactId>
 		<version>8.10.1</version>
 	</dependency>
 
+	<!-- Health check endpoint for Docker/load balancer -->
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-actuator</artifactId>
+	</dependency>
+
 	</dependencies>
+
 
 	<build>
 		<plugins>

@@ -1,0 +1,99 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# CF Arena — Docker Compose (Production)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Usage on EC2:
+#   docker compose up -d            → start all containers in background
+#   docker compose down             → stop and remove containers
+#   docker compose pull             → pull latest images from Docker Hub
+#   docker compose logs -f backend  → follow backend logs
+#
+# All secrets come from .env file (NOT committed to Git).
+# See Backend/.env.example for required variables.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ─── Backend: Spring Boot API ────────────────────────────────────────────────
+  backend:
+    image: ${DOCKER_HUB_USERNAME}/cfarena-backend:${IMAGE_TAG:-latest}
+    container_name: cfarena-backend
+    restart: unless-stopped
+
+    # ✅ Environment variables injected at RUNTIME (not baked into the image)
+    # Spring Boot reads these via ${VAR_NAME} in application.properties
+    environment:
+      MONGODB_URI:        ${MONGODB_URI}
+      MONGODB_DATABASE:   ${MONGODB_DATABASE:-cf_duel_db}
+      GOOGLE_CLIENT_ID:   ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      JWT_SECRET:         ${JWT_SECRET}
+      FRONTEND_URL:       ${FRONTEND_URL}
+      BOOTSTRAP_SECRET:   ${BOOTSTRAP_SECRET}
+
+    # ✅ Health check — Docker monitors this endpoint.
+    # Container is only marked "healthy" when Spring Boot is fully started.
+    # The frontend depends_on this being healthy before it starts.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s      # check every 30 seconds
+      timeout: 10s       # fail if no response in 10 seconds
+      retries: 5         # mark unhealthy after 5 consecutive failures
+      start_period: 60s  # give Spring Boot 60s to start before health checks begin
+
+    # ✅ Only expose backend port internally — NOT to the internet
+    # The frontend container talks to backend via the internal network
+    # Port 8080 is NOT published to the host (no ports: mapping here)
+    expose:
+      - "8080"
+
+    # Connect to the shared internal network
+    networks:
+      - cf-network
+
+    # ✅ Resource limits — prevent a runaway backend from consuming all EC2 RAM
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ─── Frontend: React (served by Nginx) ───────────────────────────────────────
+  frontend:
+    image: ${DOCKER_HUB_USERNAME}/cfarena-frontend:${IMAGE_TAG:-latest}
+    container_name: cfarena-frontend
+    restart: unless-stopped
+
+    # ✅ Only start AFTER backend is healthy
+    # Without this, frontend might start when backend is still booting
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    # ✅ Map host port 80 → container port 80
+    # This is the only port exposed to the internet
+    # Nginx (inside this container) serves both:
+    #   - React static files at /
+    #   - Proxy API calls to backend (via nginx.conf, configured in Phase 14)
+    ports:
+      - "80:80"
+
+    networks:
+      - cf-network
+
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+# ─── Network ──────────────────────────────────────────────────────────────────
+# Custom bridge network: containers can reach each other by service name.
+# e.g., from frontend container: http://backend:8080/actuator/health
+# This network is INTERNAL — not accessible from outside the EC2 instance.
+networks:
+  cf-network:
+    driver: bridge

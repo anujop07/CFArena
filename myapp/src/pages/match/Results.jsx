@@ -316,8 +316,7 @@ export default function Results() {
   const isMe = (handle) =>
     !!myHandle && !!handle && handle.toLowerCase() === myHandle.toLowerCase()
 
-  // Debug: log what the backend actually sent
-  console.log('[Results] r1:', r1, '| r2:', r2, '| s1:', s1, '| s2:', s2)
+
 
   return (
     <>

@@ -1,0 +1,27 @@
+# ─── Secrets — ABSOLUTE NO-GO ─────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets/
+
+
+# ─── Backend (Maven / Java) ────────────────────────────────────────────────────
+Backend/target/
+Backend/.mvn/wrapper/maven-wrapper.jar
+Backend/.idea/
+Backend/*.iml
+
+# ─── Frontend (Node / Vite) ────────────────────────────────────────────────────
+myapp/node_modules/
+myapp/dist/
+myapp/.DS_Store
+
+# ─── Editor / OS ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.sw?
+.DS_Store
+Thumbs.db

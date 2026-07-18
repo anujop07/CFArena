@@ -118,6 +118,9 @@ export default function Navbar({ onCfSaved }) {
           <button className="nav-btn history" onClick={() => navigate('/history')} title="View match history">
             History
           </button>
+          <button className="nav-btn" onClick={() => navigate('/developers')} title="Meet the developers">
+            Developers
+          </button>
           <button className="nav-btn accent" onClick={openCfModal} title="Edit Codeforces handle">
             CF Handle
           </button>

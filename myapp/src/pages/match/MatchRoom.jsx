@@ -349,6 +349,16 @@ const css = `
     100% { transform:translateY(-520px) scale(0.7) rotate(-2deg); opacity:0; }
   }
 
+  /* ── Skip Vote ── */
+  .mr-skip-bar { display:flex; align-items:center; justify-content:center; gap:16px; padding:16px 24px; margin-top:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); }
+  .mr-skip-status { font-size:11px; color:var(--muted2); letter-spacing:0.08em; display:flex; align-items:center; gap:8px; }
+  .mr-skip-status .check { color:var(--accent); }
+  .mr-btn-skip { font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--warn); background:transparent; border:1px solid var(--warn-border); padding:10px 22px; border-radius:var(--radius); cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .mr-btn-skip:hover { background:var(--warn-bg); border-color:var(--warn); }
+  .mr-btn-skip:disabled { opacity:0.3; cursor:not-allowed; }
+  .mr-btn-skip.voted { color:var(--muted2); border-color:var(--border2); background:var(--panel2); cursor:default; }
+  .mr-state.skipped { color:var(--muted2); background:rgba(128,128,144,0.1); border:1px solid var(--border2); }
+
   /* ── Responsive ── */
   @media (max-width:640px) {
     .mr-players { grid-template-columns:1fr; }
@@ -484,6 +494,11 @@ export default function MatchRoom() {
   const [scorePopOpp,      setScorePopOpp]      = useState(false)
   const [unlockBanner,     setUnlockBanner]     = useState(null)
 
+  // ── Skip vote state ──────────────────────────────────────
+  const [skipVoteMe,  setSkipVoteMe]  = useState(false)
+  const [skipVoteOpp, setSkipVoteOpp] = useState(false)
+  const prevCurIdxForSkipRef = useRef(null)
+
   const wsRef          = useRef(null)
   const timerRef       = useRef(null)
   const prevStatusRef  = useRef(null)
@@ -492,6 +507,29 @@ export default function MatchRoom() {
   const amIUser1Ref    = useRef(false)
 
   const navRole = state?.role || 'guest'
+
+  // ── Browser Notifications ──────────────────────────────────
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  const notify = useCallback((title, body) => {
+    if (
+      'Notification' in window &&
+      Notification.permission === 'granted' &&
+      document.hidden
+    ) {
+      try {
+        new Notification(title, {
+          body,
+          icon: '/favicon.svg',
+          tag: 'cfarena-match',
+        })
+      } catch {}
+    }
+  }, [])
 
   const showToast = (text, type = 'ok') => {
     setToast({ text, type })
@@ -535,8 +573,20 @@ export default function MatchRoom() {
     // Fireworks only for MY solve — no modal, just celebration + inline row animation
     const iAmUser1    = amIUser1Ref.current
     const myNewSolves = iAmUser1 ? newlySolvedP1 : newlySolvedP2
+    const oppNewSolves = iAmUser1 ? newlySolvedP2 : newlySolvedP1
     if (myNewSolves.length > 0) {
       celebrateSolve()
+    }
+
+    // 🔔 Desktop notification when opponent solves
+    if (oppNewSolves.length > 0) {
+      const probs = Array.isArray(data?.problems) ? data.problems : []
+      oppNewSolves.forEach(idx => {
+        const pLabel = `Problem ${idx + 1}`
+        const s1 = iAmUser1 ? (data?.score1 ?? 0) : (data?.score2 ?? 0)
+        const s2 = iAmUser1 ? (data?.score2 ?? 0) : (data?.score1 ?? 0)
+        notify('⚔ CF Arena', `Opponent solved ${pLabel}\nScore: ${s1} - ${s2}`)
+      })
     }
 
     // Unlock banner when curIdx advances
@@ -619,6 +669,17 @@ export default function MatchRoom() {
     }))
   }
 
+  // ── Send skip vote ────────────────────────────────────────
+  const sendSkipVote = () => {
+    if (!wsRef.current || skipVoteMe) return
+    setSkipVoteMe(true)
+    wsRef.current.send('/app/match/skip', {}, JSON.stringify({
+      inviteCode,
+      sender: myHandle || 'you',
+    }))
+    showToast('You voted to skip. Waiting for opponent…')
+  }
+
   // ── Trigger floating emote animation ─────────────────────
   const triggerFloatEmote = (emote) => {
     const id  = Date.now() + Math.random()
@@ -664,6 +725,10 @@ export default function MatchRoom() {
                   if (!prev) setUnreadCount(c => c + 1)
                   return prev
                 })
+                // 🔔 Notify for opponent's chat messages
+                if (data.sender !== (myHandle || 'you')) {
+                  notify('💬 CF Arena', `${data.sender}: ${data.text}`)
+                }
               } catch {}
             })
 
@@ -672,6 +737,17 @@ export default function MatchRoom() {
               try {
                 const data = JSON.parse(msg.body)
                 triggerFloatEmote(data.emote)
+              } catch {}
+            })
+
+            // ── NEW: skip vote notifications ───────────────
+            client.subscribe(`/topic/match/${inviteCode}/skip`, msg => {
+              try {
+                const data = JSON.parse(msg.body)
+                setSkipVoteMe(prev => prev || false)  // keep existing state
+                setSkipVoteOpp(true)
+                showToast('Opponent wants to skip!')
+                notify('⊘ CF Arena', 'Opponent wants to skip the current problem')
               } catch {}
             })
           })
@@ -754,6 +830,7 @@ export default function MatchRoom() {
     const oppResults = toResultsArray(match?.player2Results)
     const myR  = amIUser1 ? results[i]    : oppResults[i]
     if (myR === 'SOLVED') return 'solved'
+    if (myR === 'SKIPPED') return 'skipped'
     if (i === curIdx) return 'current'
     return 'locked'
   }
@@ -762,9 +839,19 @@ export default function MatchRoom() {
     const oppResults = toResultsArray(match?.player2Results)
     const oppR = amIUser1 ? oppResults[i] : results[i]
     if (oppR === 'SOLVED') return 'solved'
+    if (oppR === 'SKIPPED') return 'skipped'
     if (i === curIdx) return 'working'
     return 'locked'
   }
+
+  // Reset skip votes when curIdx changes (problem advanced)
+  useEffect(() => {
+    if (prevCurIdxForSkipRef.current !== null && curIdx !== prevCurIdxForSkipRef.current) {
+      setSkipVoteMe(false)
+      setSkipVoteOpp(false)
+    }
+    prevCurIdxForSkipRef.current = curIdx
+  }, [curIdx])
 
   const renderAvatar = (handle, size = '48px') => {
     const av = handle === meHandle ? meAvatar : handle === oppHandle ? oppAvatar : null
@@ -1036,6 +1123,7 @@ export default function MatchRoom() {
                           </span>
                         )}
                         {myState === 'current' && <span className="mr-state live"><span className="mr-state-dot" />Live</span>}
+                        {myState === 'skipped' && <span className="mr-state skipped">⊘ Skipped</span>}
                         {myState === 'locked'  && <span className="mr-state lock">—</span>}
                       </div>
                       <div className="mr-prob-cell">
@@ -1045,12 +1133,33 @@ export default function MatchRoom() {
                           </span>
                         )}
                         {oppState === 'working' && <span className="mr-state live"><span className="mr-state-dot" />Live</span>}
+                        {oppState === 'skipped' && <span className="mr-state skipped">⊘ Skipped</span>}
                         {oppState === 'locked'  && <span className="mr-state lock">—</span>}
                       </div>
                     </div>
                   )
                 })}
               </div>
+
+              {/* ── Skip Vote Bar ── */}
+              {curIdx < problems.length && (
+                <div className="mr-skip-bar">
+                  <div className="mr-skip-status">
+                    {skipVoteMe  && <span>You: <span className="check">✓ voted</span></span>}
+                    {skipVoteOpp && <span>Opponent: <span className="check">✓ voted</span></span>}
+                    {!skipVoteMe && !skipVoteOpp && <span>Both players must agree to skip</span>}
+                    {skipVoteMe && !skipVoteOpp && <span style={{color:'var(--muted)'}}>· waiting for opponent…</span>}
+                    {!skipVoteMe && skipVoteOpp && <span style={{color:'var(--warn)'}}>· opponent wants to skip!</span>}
+                  </div>
+                  <button
+                    className={`mr-btn-skip ${skipVoteMe ? 'voted' : ''}`}
+                    onClick={sendSkipVote}
+                    disabled={skipVoteMe}
+                  >
+                    {skipVoteMe ? '⊘ Vote Sent' : '⊘ Vote to Skip'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </main>

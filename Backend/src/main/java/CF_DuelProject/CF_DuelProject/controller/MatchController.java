@@ -1,6 +1,5 @@
 package CF_DuelProject.CF_DuelProject.controller;
 
-import java.io.Console;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -42,7 +41,7 @@ public class MatchController {
     public MatchSecondary join(Authentication authentication,
                       @RequestParam String inviteCode) {
 
-        // System.out.println("Params: " + request.getQueryString());
+        
         String email = authentication.getName();
         String cfHandle = userService.getCfHandleByEmail(email);
 
@@ -65,10 +64,14 @@ public class MatchController {
         return matchService.getMatchStatus(inviteCode);
     }
 
-    @GetMapping("/history/{userId}")
-    public ResponseEntity<?> getMatchHistory(@PathVariable String userId) {
-        System.out.println("Fetching History API for User: " + userId);
-        return ResponseEntity.ok(matchService.getUserMatchHistory(userId));
+    // ✅ IDOR fix: users can only fetch their own match history
+    @GetMapping("/history")
+    public ResponseEntity<?> getMatchHistory(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        String email = authentication.getName();
+        return ResponseEntity.ok(matchService.getUserMatchHistory(email));
     }
 
 }

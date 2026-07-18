@@ -2,10 +2,12 @@ package CF_DuelProject.CF_DuelProject.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
 @Service
+@Slf4j
 public class CodeforcesService {
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -18,7 +20,7 @@ public class CodeforcesService {
 
         Map response = restTemplate.getForObject(url, Map.class);
 
-        System.out.println("CF response for " + user + ": " + response.get("status"));
+        log.debug("CF response for {}: {}", user, response.get("status"));
 
         List<Map> submissions = (List<Map>)response.get("result");
         if (submissions == null) return null;
@@ -28,7 +30,7 @@ public class CodeforcesService {
         int contestId = Integer.parseInt(parts[0]);
         String index = parts[1];
 
-        System.out.println("TARGET → " + contestId + " " + index);
+        log.debug("TARGET → {} {}", contestId, index);
 
         Date earliest = null;
 
@@ -53,7 +55,7 @@ public class CodeforcesService {
             String indexFromAPI = (String) problem.get("index");
 
             // 🔥 DEBUG
-            System.out.println("API → " + contestIdFromAPI + " " + indexFromAPI);
+            log.debug("API → {} {}", contestIdFromAPI, indexFromAPI);
 
             if (contestIdFromAPI != contestId) continue;
             if (!index.equals(indexFromAPI)) continue;
@@ -61,7 +63,7 @@ public class CodeforcesService {
             Object verdict = sub.get("verdict");
             if (verdict == null || !verdict.equals("OK")) continue;
 
-            System.out.println("MATCH FOUND → " + submissionTime);
+            log.debug("MATCH FOUND → {}", submissionTime);
 
             if (earliest == null || submissionTime.before(earliest)) {
                 earliest = submissionTime;
@@ -71,8 +73,7 @@ public class CodeforcesService {
         return earliest;
 
     } catch (Exception e) {
-        System.out.println("CF API error for user: " + user);
-        e.printStackTrace();
+        log.error("CF API error for user: {}", user, e);
         return null;
     }
 }
