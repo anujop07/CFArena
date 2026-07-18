@@ -52,8 +52,10 @@ pipeline {
     
     post {
         always {
-            echo '🧹 Cleaning up Docker credentials...'
-            sh 'docker logout'
+            node {
+                echo '🧹 Cleaning up Docker credentials...'
+                sh 'docker logout || true'
+            }
         }
     }
 }
