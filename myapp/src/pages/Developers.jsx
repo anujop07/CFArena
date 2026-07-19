@@ -36,7 +36,7 @@ const css = `
 
 const DEVELOPERS = [
   {
-    name: "Developer 1",
+    name: "ANUJ naam hei ",
     role: "Fullstack Engineer",
     img: dev1Img,
     desc: "Passionate about building scalable backend systems and competitive programming."

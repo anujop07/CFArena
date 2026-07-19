@@ -11,8 +11,7 @@ dist
 .gitattributes
 
 # Environment files — secrets never go in Docker build context
-.env
-.env.*
+# (Removed .env so Vite can bake the API URL into the frontend build)
 *.local
 
 # Editor / OS
