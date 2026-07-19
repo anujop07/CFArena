@@ -6,7 +6,10 @@ import { fetchCFAvatar } from '../../utils/cfApi'
 import Navbar from '../../components/Navbar'
 import { celebrateSolve } from './fireworks'
 
-const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8080'
+// Strip any accidental /ws suffix — the SockJS URL below appends /ws itself.
+// VITE_WS_URL should be just the base (e.g. https://cfarena.in), NOT https://cfarena.in/ws
+const _RAW_WS_BASE = import.meta.env.VITE_WS_URL || 'http://localhost:8080'
+const WS_BASE = _RAW_WS_BASE.replace(/\/ws\/?$/, '')
 
 function toResultsArray(val) {
   if (!val) return []
@@ -625,13 +628,19 @@ export default function MatchRoom() {
         prevStatusRef.current = data.status
         detectChanges(data)
         setMatch(data)
-        if (showLoading && data.problems?.length > 0) setTimeout(() => setShowLoading(false), 600)
+        // ✅ Use functional updater so this doesn't need showLoading in the dep array
+        setShowLoading(prev => {
+          if (prev && data.problems?.length > 0) setTimeout(() => setShowLoading(false), 600)
+          return prev
+        })
         if (data.status === 'FINISHED') navigate(`/results/${inviteCode}`)
       }
     } catch (err) {
       setLoadError(err?.response?.data?.message || err.message || 'Could not load match.')
     }
-  }, [inviteCode, navigate, showLoading, detectChanges])
+  // ✅ showLoading intentionally removed from deps — using functional updater above avoids stale closure
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteCode, navigate, detectChanges])
 
   useEffect(() => {
     fetchStatus()
@@ -696,7 +705,8 @@ export default function MatchRoom() {
       s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js'
       s2.onload = () => {
         try {
-          const sock   = new window.SockJS(`${WS_BASE.replace(/^ws/, 'http')}/ws`)
+          // WS_BASE is an https:// URL; SockJS accepts http/https and upgrades to wss automatically.
+          const sock   = new window.SockJS(`${WS_BASE}/ws`)
           const client = window.Stomp.over(sock)
           client.debug = null
           client.connect({}, () => {
@@ -744,10 +754,17 @@ export default function MatchRoom() {
             client.subscribe(`/topic/match/${inviteCode}/skip`, msg => {
               try {
                 const data = JSON.parse(msg.body)
-                setSkipVoteMe(prev => prev || false)  // keep existing state
-                setSkipVoteOpp(true)
-                showToast('Opponent wants to skip!')
-                notify('⊘ CF Arena', 'Opponent wants to skip the current problem')
+                // Backend sends skipVoteUser1 + skipVoteUser2 booleans.
+                // Map them to "me" vs "opponent" using amIUser1Ref.
+                const iAmUser1 = amIUser1Ref.current
+                const myVoteFlag   = iAmUser1 ? data.skipVoteUser1 : data.skipVoteUser2
+                const oppVoteFlag  = iAmUser1 ? data.skipVoteUser2 : data.skipVoteUser1
+                if (myVoteFlag)  setSkipVoteMe(true)
+                if (oppVoteFlag) {
+                  setSkipVoteOpp(true)
+                  showToast('Opponent wants to skip!')
+                  notify('⊘ CF Arena', 'Opponent wants to skip the current problem')
+                }
               } catch {}
             })
           })

@@ -18,8 +18,8 @@ pipeline {
                 // The build args are hardcoded here because they are public API URLs, not secrets
                 sh '''
                 docker build \
-                  --build-arg VITE_API_URL=http://43.204.211.162.nip.io \
-                  --build-arg VITE_WS_URL=http://43.204.211.162.nip.io \
+                  --build-arg VITE_API_URL=https://cfarena.in \
+                  --build-arg VITE_WS_URL=https://cfarena.in \
                   --build-arg VITE_GOOGLE_CLIENT_ID=746507303760-6op2ba78jjkakt9a47gqb040u0e301v6.apps.googleusercontent.com \
                   -t ${DOCKER_HUB_USERNAME}/cfarena-frontend:${IMAGE_TAG} \
                   ./myapp
