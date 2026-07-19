@@ -50,6 +50,7 @@ export default function Landing() {
         <div style={s.navLinks}>
           <a href="#how-it-works" style={s.navLink}>How it works</a>
           <a href="#features"     style={s.navLink}>Features</a>
+          <a href="/developers"   style={s.navLink}>Developers</a>
           <a href="/login"        style={s.btnGhost}>Log in</a>
           <a href="/signup"       style={s.btnPrimary}>Sign up free</a>
         </div>

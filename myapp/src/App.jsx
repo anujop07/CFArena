@@ -143,11 +143,7 @@ function App() {
 
         <Route
           path="/developers"
-          element={
-            <ProtectedRoute>
-              <Developers />
-            </ProtectedRoute>
-          }
+          element={<Developers />}
         />
 
         {/* 🏆 Tournament Routes */}
