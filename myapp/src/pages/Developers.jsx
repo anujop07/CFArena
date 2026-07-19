@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import Navbar from '../components/Navbar'
 import dev1Img from '../assets/dev1.png'
 import dev2Img from '../assets/dev2.jpg'
@@ -87,7 +87,7 @@ const css = `
   /* ─── Header ─── */
   .dev-header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 60px;
     opacity: 0;
     transform: translateY(30px);
     animation: fadeUp 0.8s ease forwards;
@@ -138,37 +138,6 @@ const css = `
     line-height: 1.6;
   }
 
-  /* ─── Stats bar ─── */
-  .dev-stats {
-    display: flex;
-    gap: 48px;
-    margin: 48px 0 64px;
-    padding: 24px 48px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid #1a1a1a;
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeUp 0.8s ease 0.2s forwards;
-  }
-  .dev-stat {
-    text-align: center;
-  }
-  .dev-stat-num {
-    font-family: 'Syne', sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    color: #c8ff00;
-    margin-bottom: 4px;
-    line-height: 1;
-  }
-  .dev-stat-label {
-    font-size: 11px;
-    color: #555;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
 
   /* ─── Card Grid ─── */
   .dev-grid {
@@ -403,51 +372,6 @@ const css = `
     text-transform: uppercase;
   }
 
-  /* ─── Tech Stack Footer ─── */
-  .dev-tech {
-    margin-top: 60px;
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    padding: 20px 40px;
-    border: 1px solid #151515;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.01);
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  .dev-tech.visible {
-    opacity: 1;
-    transform: translateY(0);
-    transition: all 0.8s ease;
-  }
-  .dev-tech-label {
-    font-size: 10px;
-    color: #444;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .dev-tech-items {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-  .dev-tech-item {
-    font-size: 12px;
-    color: #666;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: color 0.3s;
-  }
-  .dev-tech-item:hover { color: #c8ff00; }
-  .dev-tech-dot {
-    width: 4px; height: 4px;
-    background: #c8ff00;
-    border-radius: 50%;
-    opacity: 0.5;
-  }
 
   /* ─── Animation keyframes ─── */
   @keyframes fadeUp {
@@ -457,9 +381,6 @@ const css = `
   /* ─── Responsive ─── */
   @media (max-width: 768px) {
     .dev-grid { grid-template-columns: 1fr; max-width: 420px; }
-    .dev-stats { flex-wrap: wrap; gap: 24px; padding: 20px 28px; justify-content: center; }
-    .dev-tech { flex-direction: column; gap: 12px; text-align: center; }
-    .dev-tech-items { justify-content: center; }
   }
   @media (max-width: 480px) {
     .dev-main { padding: 40px 16px 60px; }
@@ -469,50 +390,46 @@ const css = `
 
 const DEVELOPERS = [
   {
-    name: "Anuj",
-    role: "Fullstack Engineer",
+    name: "Anuj Nagpure",
+    role: "Backend Architecture & DevOps",
     img: dev1Img,
-    desc: "Passionate about building scalable backend systems and competitive programming.",
-    skills: ["Java", "Spring Boot", "React", "WebSockets"],
-    linkedin: "https://linkedin.com/in/",
-    github: "https://github.com/"
+    desc: "Architects the backend infrastructure, manages deployments, and keeps production running smooth.",
+    skills: ["Java", "Spring Boot", "Docker", "DevOps"],
+    linkedin: "https://www.linkedin.com/in/anuj-nagpure",
+    github: "https://github.com/anujop07"
   },
   {
-    name: "Manasvi",
-    role: "Allover Architect",
+    name: "Mrunmayi Kulkarni",
+    role: "Fullstack Developer",
     img: dev2Img,
-    desc: "Loves creating smooth, pixel-perfect user interfaces and intense animations.",
-    skills: ["React", "CSS", "Figma", "UI/UX"],
+    desc: "Bridges frontend and backend, building seamless end-to-end features across the stack.",
+    skills: ["React", "Java", "Spring Boot", "REST APIs"],
     linkedin: "https://linkedin.com/in/",
     github: "https://github.com/"
   },
   {
-    name: "Developer 3",
-    role: "Backend Ninja",
+    name: "Divyansh Khatikar",
+    role: "Backend Developer",
     img: dev3Img,
-    desc: "Ensures the database and websockets are always blazing fast.",
-    skills: ["Node.js", "PostgreSQL", "Redis", "Docker"],
+    desc: "Ensures the database and websockets are always blazing fast and reliable.",
+    skills: ["Java", "Spring Boot", "PostgreSQL", "WebSockets"],
     linkedin: "https://linkedin.com/in/",
     github: "https://github.com/"
   },
   {
-    name: "Developer 4",
-    role: "UI/UX Designer",
+    name: "Ishwari Chavan",
+    role: "UI/UX & Frontend",
     img: dev4Img,
-    desc: "Designs the ultimate dark-mode arena experience for coders.",
-    skills: ["Figma", "Framer", "CSS", "Motion"],
+    desc: "Designs and builds the pixel-perfect dark-mode arena experience for coders.",
+    skills: ["React", "CSS", "Figma", "UI/UX"],
     linkedin: "https://linkedin.com/in/",
     github: "https://github.com/"
   }
 ]
 
-const TECH_STACK = ["React", "Spring Boot", "PostgreSQL", "WebSockets", "OAuth2", "Vite", "Codeforces API"]
-
 export default function Developers() {
   const cardRefs = useRef([])
   const quoteRef = useRef(null)
-  const techRef = useRef(null)
-  const [counters, setCounters] = useState({ commits: 0, lines: 0, hours: 0, coffee: 0 })
 
   useEffect(() => {
     // Intersection observer for scroll animations
@@ -529,24 +446,6 @@ export default function Developers() {
 
     cardRefs.current.forEach(card => { if (card) observer.observe(card) })
     if (quoteRef.current) observer.observe(quoteRef.current)
-    if (techRef.current) observer.observe(techRef.current)
-
-    // Animate counters
-    const targets = { commits: 2847, lines: 58, hours: 1200, coffee: 342 }
-    const duration = 2000
-    const start = Date.now()
-    const tick = () => {
-      const progress = Math.min((Date.now() - start) / duration, 1)
-      const ease = 1 - Math.pow(1 - progress, 3) // easeOutCubic
-      setCounters({
-        commits: Math.floor(targets.commits * ease),
-        lines: Math.floor(targets.lines * ease),
-        hours: Math.floor(targets.hours * ease),
-        coffee: Math.floor(targets.coffee * ease)
-      })
-      if (progress < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
 
     return () => observer.disconnect()
   }, [])
@@ -575,25 +474,7 @@ export default function Developers() {
             </p>
           </div>
 
-          {/* ── Stats Bar ── */}
-          <div className="dev-stats">
-            <div className="dev-stat">
-              <div className="dev-stat-num">{counters.commits.toLocaleString()}</div>
-              <div className="dev-stat-label">Commits</div>
-            </div>
-            <div className="dev-stat">
-              <div className="dev-stat-num">{counters.lines}K</div>
-              <div className="dev-stat-label">Lines of Code</div>
-            </div>
-            <div className="dev-stat">
-              <div className="dev-stat-num">{counters.hours.toLocaleString()}+</div>
-              <div className="dev-stat-label">Dev Hours</div>
-            </div>
-            <div className="dev-stat">
-              <div className="dev-stat-num">{counters.coffee}</div>
-              <div className="dev-stat-label">Cups of Coffee</div>
-            </div>
-          </div>
+
 
           {/* ── Developer Cards ── */}
           <div className="dev-grid">
@@ -654,18 +535,7 @@ export default function Developers() {
             <p className="dev-quote-attr">— The CF Arena Team</p>
           </div>
 
-          {/* ── Tech Stack ── */}
-          <div className="dev-tech" ref={techRef}>
-            <span className="dev-tech-label">Built With</span>
-            <div className="dev-tech-items">
-              {TECH_STACK.map((tech, i) => (
-                <span className="dev-tech-item" key={i}>
-                  <span className="dev-tech-dot" />
-                  {tech}
-                </span>
-              ))}
-            </div>
-          </div>
+
         </main>
       </div>
     </>
