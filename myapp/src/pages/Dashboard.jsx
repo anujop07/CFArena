@@ -88,15 +88,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     axiosInstance.get(API_PATHS.USER.ME)
-      .then(async (res) => { 
+      .then(async (res) => {
         if (!res.data?.cfHandle) {
-          setModal('cf') 
+          setModal('cf')
         } else {
           const avUrl = await fetchCFAvatar(res.data.cfHandle)
           if (avUrl) setAvatar(avUrl)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const onSaveCfHandle = async () => {
@@ -167,7 +167,7 @@ export default function Dashboard() {
               <div className="db-action-label">Tournaments</div>
               <p className="db-action-desc">Compete in bracket-style arenas. Create or join tournaments.</p>
               <button className="db-cta-ghost" onClick={() => navigate('/tournaments')}>
-                View Tournaments
+                View Tournaments (Or Create)
               </button>
             </div>
           </div>
