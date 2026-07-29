@@ -5,12 +5,14 @@ import { API_PATHS, BASE_URL } from '../../utils/apiPaths'
 import './auth.css'
 import { useState, useContext } from 'react'
 import { AuthContext } from '../../context/AuthContext'
+import CutePig from '../../components/CutePig'
 export default function Login() {
  const { login } = useContext(AuthContext)
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [passwordFocused, setPasswordFocused] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const justRegistered = Boolean(location?.state?.justRegistered)
@@ -70,6 +72,7 @@ export default function Login() {
         </aside>
 
         <article className="auth-card">
+          <CutePig passwordFocused={passwordFocused} />
           <h2>Welcome back</h2>
           {justRegistered ? <p className="auth-note">Account created. Sign in to start dueling.</p> : null}
 
@@ -105,6 +108,8 @@ export default function Login() {
                 placeholder="Enter password"
                 value={form.password}
                 onChange={onChange}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
                 autoComplete="current-password"
               />
             </div>

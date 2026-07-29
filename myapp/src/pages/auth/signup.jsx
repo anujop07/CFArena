@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { API_PATHS , BASE_URL } from '../../utils/apiPaths'
 import './auth.css'
+import CutePig from '../../components/CutePig'
 
 const initialForm = {
   name: '',
@@ -15,6 +16,7 @@ export default function Signup() {
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [passwordFocused, setPasswordFocused] = useState(false)
   const navigate = useNavigate()
 
   const onChange = (event) => {
@@ -80,6 +82,7 @@ export default function Signup() {
         </aside>
 
         <article className="auth-card">
+          <CutePig passwordFocused={passwordFocused} />
           <h2>Create account</h2>
 
           <div className="auth-segment">
@@ -140,6 +143,8 @@ export default function Signup() {
                 placeholder="Create password"
                 value={form.password}
                 onChange={onChange}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
                 autoComplete="new-password"
               />
             </div>
