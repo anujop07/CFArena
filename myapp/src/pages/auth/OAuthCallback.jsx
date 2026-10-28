@@ -7,9 +7,12 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    // token is delivered in the URL fragment; the query-string form is kept only for older deployments
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("token");
+    const token = fromHash || new URLSearchParams(window.location.search).get("token");
     if (token) {
+      // remove the token from the address bar / history immediately
+      window.history.replaceState(null, "", window.location.pathname);
       login(token);
       navigate("/dashboard");
     } else {

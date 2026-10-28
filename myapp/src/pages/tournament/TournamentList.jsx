@@ -1,9 +1,20 @@
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState, useContext, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { API_PATHS } from '../../utils/apiPaths'
 import { AuthContext } from '../../context/AuthContext'
 import Navbar from '../../components/Navbar'
+
+function decodeToken(token) {
+  if (!token) return null
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    return JSON.parse(atob(padded))
+  } catch { return null }
+}
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Bebas+Neue&display=swap');
@@ -73,12 +84,15 @@ const css = `
 export default function TournamentList() {
   const navigate = useNavigate()
   const { userToken } = useContext(AuthContext)
+  const token = localStorage.getItem('token') || userToken
+  const claims = useMemo(() => decodeToken(token), [token])
+  const userEmail = claims?.sub || ''
 
   const [tab, setTab] = useState('active')
   const [tournaments, setTournaments] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
-  const [myCfHandle, setMyCfHandle] = useState('')
+  const [myCfHandle, setMyCfHandle] = useState(localStorage.getItem('cfHandle') || '')
 
   const showToast = (text, type = 'ok') => {
     setToast({ text, type })
@@ -87,15 +101,18 @@ export default function TournamentList() {
 
   // Fetch user info
   useEffect(() => {
-    if (!userToken) return
     axiosInstance.get(API_PATHS.USER.ME)
-      .then(res => { if (res.data?.cfHandle) setMyCfHandle(res.data.cfHandle) })
+      .then(res => {
+        const handle = res.data?.codeforcesHandle || res.data?.cfHandle || ''
+        if (handle) {
+          setMyCfHandle(handle)
+          localStorage.setItem('cfHandle', handle)
+        }
+      })
       .catch(() => {})
-  }, [userToken])
+  }, [])
 
-  // Fetch tournaments based on tab
-  useEffect(() => {
-    setLoading(true)
+  const fetchTournaments = () => {
     const url = tab === 'my'
       ? API_PATHS.TOURNAMENT.MY
       : API_PATHS.TOURNAMENT.ACTIVE
@@ -104,18 +121,35 @@ export default function TournamentList() {
       .then(res => setTournaments(res.data || []))
       .catch(() => setTournaments([]))
       .finally(() => setLoading(false))
+  }
+
+  // Fetch tournaments based on tab and poll
+  useEffect(() => {
+    setLoading(true)
+    fetchTournaments()
+
+    const interval = setInterval(fetchTournaments, 4000)
+    return () => clearInterval(interval)
   }, [tab])
 
-  const onRegister = async (id) => {
+  const onRequestJoin = async (id) => {
     try {
-      await axiosInstance.post(`${API_PATHS.TOURNAMENT.REGISTER}/${id}/register`)
-      showToast('Registered!')
-      // Refresh
-      const url = tab === 'my' ? API_PATHS.TOURNAMENT.MY : API_PATHS.TOURNAMENT.ACTIVE
-      const res = await axiosInstance.get(url)
-      setTournaments(res.data || [])
+      await axiosInstance.post(API_PATHS.TOURNAMENT.REQUEST_JOIN(id))
+      showToast('Join request sent!')
+      fetchTournaments()
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.response?.data || 'Failed to register.'
+      const msg = err?.response?.data?.message || err?.response?.data || 'Failed to request join.'
+      showToast(typeof msg === 'string' ? msg : 'Failed.', 'error')
+    }
+  }
+
+  const onCancelRequest = async (id) => {
+    try {
+      await axiosInstance.post(API_PATHS.TOURNAMENT.CANCEL_REQUEST(id))
+      showToast('Join request cancelled.')
+      fetchTournaments()
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.data || 'Failed to cancel request.'
       showToast(typeof msg === 'string' ? msg : 'Failed.', 'error')
     }
   }
@@ -123,10 +157,8 @@ export default function TournamentList() {
   const onUnregister = async (id) => {
     try {
       await axiosInstance.post(`${API_PATHS.TOURNAMENT.UNREGISTER}/${id}/unregister`)
-      showToast('Unregistered.')
-      const url = tab === 'my' ? API_PATHS.TOURNAMENT.MY : API_PATHS.TOURNAMENT.ACTIVE
-      const res = await axiosInstance.get(url)
-      setTournaments(res.data || [])
+      showToast('Left tournament.')
+      fetchTournaments()
     } catch (err) {
       const msg = err?.response?.data?.message || err?.response?.data || 'Failed.'
       showToast(typeof msg === 'string' ? msg : 'Failed.', 'error')
@@ -147,7 +179,15 @@ export default function TournamentList() {
   }
 
   const isRegistered = (t) => t.registeredPlayers?.includes(myCfHandle)
-  const isCreator = (t) => t.creatorId === myCfHandle
+  const hasRequested = (t) => t.joinRequests?.includes(myCfHandle)
+  const isCreator = (t) => {
+    if (!t) return false
+    const email = userEmail?.trim().toLowerCase()
+    const handle = (myCfHandle || localStorage.getItem('cfHandle') || '').trim().toLowerCase()
+    if (t.creatorEmail && email && t.creatorEmail.trim().toLowerCase() === email) return true
+    if (t.creatorId && handle && t.creatorId.trim().toLowerCase() === handle) return true
+    return false
+  }
   const isFull = (t) => (t.registeredPlayers?.length || 0) >= t.maxPlayers
 
   const getRoundLabel = (round, total) => {
@@ -197,86 +237,113 @@ export default function TournamentList() {
               <div className="tl-empty">Loading...</div>
             ) : tournaments.length === 0 ? (
               <div className="tl-empty">
-                {tab === 'my' ? 'You haven\'t joined any tournaments yet.' : 'No active tournaments right now.'}
+                {tab === 'my' ? 'You haven\'t joined or created any tournaments yet.' : 'No active tournaments right now.'}
               </div>
             ) : (
-              tournaments.map((t) => (
-                <div className="tl-card" key={t.id}>
-                  <div className="tl-card-top">
-                    <div className="tl-card-name">{t.name || 'Unnamed Tournament'}</div>
-                    <div className={`tl-card-status ${statusClass(t.status)}`}>
-                      {statusLabel(t.status)}
-                    </div>
-                  </div>
+              tournaments.map((t) => {
+                const creator = isCreator(t)
+                const registered = isRegistered(t)
+                const requested = hasRequested(t)
+                const full = isFull(t)
 
-                  <div className="tl-card-meta">
-                    <div className="tl-card-meta-item">
-                      Players: <span>{t.registeredPlayers?.length || 0}/{t.maxPlayers}</span>
-                    </div>
-                    <div className="tl-card-meta-item">
-                      Difficulty: <span>{t.difficulty}</span>
-                    </div>
-                    <div className="tl-card-meta-item">
-                      Duration: <span>{t.matchDurationMinutes} min</span>
-                    </div>
-                    {t.status === 'ONGOING' && (
-                      <div className="tl-card-meta-item">
-                        Round: <span>{getRoundLabel(t.currentRound, t.totalRounds)}</span>
+                return (
+                  <div className="tl-card" key={t.id}>
+                    <div className="tl-card-top">
+                      <div>
+                        <div className="tl-card-name">{t.name || 'Unnamed Tournament'}</div>
+                        <div style={{ fontSize: '10px', color: '#888', marginTop: '4px', letterSpacing: '0.08em' }}>
+                          Referee / Host: <span style={{ color: '#f0f0e8' }}>{t.creatorId || 'Host'}</span>
+                          {creator && <span style={{ color: '#c8ff00', marginLeft: '6px' }}>(You)</span>}
+                        </div>
                       </div>
-                    )}
-                    {t.status === 'FINISHED' && t.winnerId && (
-                      <div className="tl-card-meta-item">
-                        🏆 Winner: <span style={{ color: '#c8ff00' }}>{t.winnerId}</span>
+                      <div className={`tl-card-status ${statusClass(t.status)}`}>
+                        {statusLabel(t.status)}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="tl-card-bottom">
-                    {/* Registration state buttons */}
-                    {t.status === 'REGISTRATION' && !isRegistered(t) && !isFull(t) && (
-                      <button className="tl-btn tl-btn-primary" onClick={() => onRegister(t.id)}>
-                        Register
-                      </button>
-                    )}
+                    <div className="tl-card-meta">
+                      <div className="tl-card-meta-item">
+                        Players: <span>{t.registeredPlayers?.length || 0}/{t.maxPlayers}</span>
+                      </div>
+                      {creator && t.joinRequests?.length > 0 && (
+                        <div className="tl-card-meta-item">
+                          Requests: <span style={{ color: '#ffaa44', fontWeight: 600 }}>{t.joinRequests.length} Pending</span>
+                        </div>
+                      )}
+                      <div className="tl-card-meta-item">
+                        Difficulty: <span>{t.difficulty}</span>
+                      </div>
+                      <div className="tl-card-meta-item">
+                        Duration: <span>{t.matchDurationMinutes} min</span>
+                      </div>
+                      {t.status === 'ONGOING' && (
+                        <div className="tl-card-meta-item">
+                          Round: <span>{getRoundLabel(t.currentRound, t.totalRounds)}</span>
+                        </div>
+                      )}
+                      {t.status === 'FINISHED' && t.winnerId && (
+                        <div className="tl-card-meta-item">
+                          🏆 Winner: <span style={{ color: '#c8ff00' }}>{t.winnerId}</span>
+                        </div>
+                      )}
+                    </div>
 
-                    {t.status === 'REGISTRATION' && !isRegistered(t) && isFull(t) && (
-                      <span className="tl-badge tl-badge-full">Full</span>
-                    )}
-
-                    {t.status === 'REGISTRATION' && isRegistered(t) && (
-                      <>
-                        <span className="tl-badge tl-badge-registered">✓ Registered</span>
-                        {!isCreator(t) && (
-                          <button className="tl-btn tl-btn-ghost" onClick={() => onUnregister(t.id)}>
-                            Leave
+                    <div className="tl-card-bottom">
+                      {/* Host Referee Controls */}
+                      {creator ? (
+                        <>
+                          <span className="tl-badge" style={{ color: '#c8ff00', background: 'rgba(200,255,0,0.1)', border: '1px solid rgba(200,255,0,0.3)' }}>
+                            ⚖ Host / Referee
+                          </span>
+                          <button className="tl-btn tl-btn-primary" onClick={() => navigate(`/tournament/${t.id}`)}>
+                            Referee Panel
                           </button>
-                        )}
-                      </>
-                    )}
+                        </>
+                      ) : (
+                        <>
+                          {/* Non-creator player states */}
+                          {t.status === 'REGISTRATION' && !registered && !requested && !full && (
+                            <button className="tl-btn tl-btn-primary" onClick={() => onRequestJoin(t.id)}>
+                              Request to Join
+                            </button>
+                          )}
 
-                    {/* View bracket */}
-                    <button className="tl-btn tl-btn-ghost" onClick={() => navigate(`/tournament/${t.id}`)}>
-                      View Bracket
-                    </button>
+                          {t.status === 'REGISTRATION' && !registered && requested && (
+                            <>
+                              <span className="tl-badge" style={{ color: '#ffaa44', background: 'rgba(255,170,68,0.1)', border: '1px solid rgba(255,170,68,0.3)' }}>
+                                ⏳ Request Pending
+                              </span>
+                              <button className="tl-btn tl-btn-ghost" onClick={() => onCancelRequest(t.id)}>
+                                Cancel Request
+                              </button>
+                            </>
+                          )}
 
-                    {/* Creator: Start Tournament */}
-                    {t.status === 'REGISTRATION' && isCreator(t) && t.registeredPlayers?.length >= 2 && (
-                      <button className="tl-btn tl-btn-primary" onClick={async () => {
-                        try {
-                          await axiosInstance.post(`${API_PATHS.TOURNAMENT.START}/${t.id}/start`)
-                          showToast('Tournament started!')
-                          navigate(`/tournament/${t.id}`)
-                        } catch (err) {
-                          const msg = err?.response?.data?.message || err?.response?.data || 'Failed.'
-                          showToast(typeof msg === 'string' ? msg : 'Failed.', 'error')
-                        }
-                      }}>
-                        ⚔ Start
-                      </button>
-                    )}
+                          {t.status === 'REGISTRATION' && !registered && !requested && full && (
+                            <span className="tl-badge tl-badge-full">Full</span>
+                          )}
+
+                          {registered && (
+                            <>
+                              <span className="tl-badge tl-badge-registered">✓ Accepted / Player</span>
+                              {t.status === 'REGISTRATION' && (
+                                <button className="tl-btn tl-btn-ghost" onClick={() => onUnregister(t.id)}>
+                                  Leave
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* View bracket button for everyone */}
+                          <button className="tl-btn tl-btn-ghost" onClick={() => navigate(`/tournament/${t.id}`)}>
+                            View Bracket
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
 
           </div>

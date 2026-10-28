@@ -18,7 +18,7 @@ import CF_DuelProject.CF_DuelProject.service.TournamentService;
 import CF_DuelProject.CF_DuelProject.service.UserService;
 
 @RestController
-@RequestMapping("api/tournament")
+@RequestMapping({"/api/tournament", "/tournament"})
 public class TournamentController {
 
     private final TournamentService tournamentService;
@@ -27,6 +27,12 @@ public class TournamentController {
     private final TournamentRepository tournamentRepository;
     // ✅ Injected for admin role check
     private final UserRepository userRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${app.tournament.admin-only:true}")
+    private boolean adminOnly = true;
+
+    @org.springframework.beans.factory.annotation.Value("${app.admin-emails:}")
+    private String adminEmails = "";
 
     public TournamentController(TournamentService tournamentService,
                                 UserService userService,
@@ -47,27 +53,82 @@ public class TournamentController {
 
         String email = (String) authentication.getPrincipal();
 
-        // ✅ Proper role-based authorization — check isAdmin flag in database
+        // ✅ Verify user exists
         User caller = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        if (!caller.isAdmin()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can create tournaments.");
+        if (adminOnly && !isOrganizer(caller)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only organizers can create tournaments.");
         }
 
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
         return tournamentService.createTournament(
-                cfHandle, req.name, req.maxPlayers,
+                cfHandle, email, req.name, req.maxPlayers,
                 req.difficulty, req.matchDurationMinutes);
     }
 
-    // ✅ Register for Tournament
+    private boolean isOrganizer(User caller) {
+        if (caller.isAdmin()) return true;
+        if (caller.getEmail() == null || adminEmails == null) return false;
+        for (String allowed : adminEmails.split(",")) {
+            if (!allowed.isBlank() && allowed.trim().equalsIgnoreCase(caller.getEmail().trim())) return true;
+        }
+        return false;
+    }
+
+    // ✅ Request to Join Tournament (Player sends request)
+    @PostMapping("/{id}/join-request")
+    public Tournament requestToJoin(Authentication authentication,
+            @PathVariable String id) {
+
+        String email = (String) authentication.getPrincipal();
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
+
+        return tournamentService.requestToJoin(id, cfHandle);
+    }
+
+    // ✅ Cancel Join Request (Player cancels their request)
+    @PostMapping("/{id}/join-request/cancel")
+    public Tournament cancelJoinRequest(Authentication authentication,
+            @PathVariable String id) {
+
+        String email = (String) authentication.getPrincipal();
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
+
+        return tournamentService.cancelJoinRequest(id, cfHandle);
+    }
+
+    // ✅ Accept Player Join Request (Host only)
+    @PostMapping("/{id}/accept-request")
+    public Tournament acceptRequest(Authentication authentication,
+            @PathVariable String id,
+            @RequestParam String playerHandle) {
+
+        String email = (String) authentication.getPrincipal();
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
+
+        return tournamentService.acceptJoinRequest(id, cfHandle, email, playerHandle);
+    }
+
+    // ✅ Decline Player Join Request (Host only)
+    @PostMapping("/{id}/decline-request")
+    public Tournament declineRequest(Authentication authentication,
+            @PathVariable String id,
+            @RequestParam String playerHandle) {
+
+        String email = (String) authentication.getPrincipal();
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
+
+        return tournamentService.declineJoinRequest(id, cfHandle, email, playerHandle);
+    }
+
+    // ✅ Register for Tournament (backward compatibility)
     @PostMapping("/{id}/register")
     public Tournament register(Authentication authentication,
             @PathVariable String id) {
 
         String email = (String) authentication.getPrincipal();
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
 
         return tournamentService.registerPlayer(id, cfHandle);
     }
@@ -78,7 +139,7 @@ public class TournamentController {
             @PathVariable String id) {
 
         String email = (String) authentication.getPrincipal();
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
 
         return tournamentService.unregisterPlayer(id, cfHandle);
     }
@@ -88,9 +149,9 @@ public class TournamentController {
             @PathVariable String id) {
 
         String email = (String) authentication.getPrincipal();
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
 
-        return tournamentService.startTournament(id, cfHandle);
+        return tournamentService.startTournament(id, cfHandle, email);
     }
 
     // ✅ Start Round Matches Manually (Creator only)
@@ -99,9 +160,9 @@ public class TournamentController {
             @PathVariable String id, @PathVariable int round) {
 
         String email = (String) authentication.getPrincipal();
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
 
-        return tournamentService.startRoundMatchesManual(id, cfHandle, round, matchService);
+        return tournamentService.startRoundMatchesManual(id, cfHandle, email, round, matchService);
     }
 
     // ✅ Advance Round Manually (Creator only)
@@ -110,9 +171,9 @@ public class TournamentController {
             @PathVariable String id) {
 
         String email = (String) authentication.getPrincipal();
-        String cfHandle = userService.getCfHandleByEmail(email);
+        String cfHandle = userService.getVerifiedCfHandleByEmail(email);
 
-        return tournamentService.advanceRoundManual(id, cfHandle);
+        return tournamentService.advanceRoundManual(id, cfHandle, email);
     }
 
     // ✅ Get Tournament Details
@@ -139,6 +200,6 @@ public class TournamentController {
         String email = (String) authentication.getPrincipal();
         String cfHandle = userService.getCfHandleByEmail(email);
 
-        return tournamentService.getMyTournaments(cfHandle);
+        return tournamentService.getMyTournaments(cfHandle, email);
     }
 }

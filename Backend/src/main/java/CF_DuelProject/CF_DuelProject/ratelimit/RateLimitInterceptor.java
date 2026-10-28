@@ -35,13 +35,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         else if (path.contains("/auth/register")) {
             bucket = rateLimiterService.resolveBucket(key + "_register", 3, 3, Duration.ofMinutes(1));
         }
-        else if (path.contains("/api/match/join")) {
+        else if (path.contains("/match/join")) {
             bucket = rateLimiterService.resolveBucket(key + "_join", 15, 15, Duration.ofMinutes(1));
         }
-        else if (path.contains("/api/match/create")) {
+        else if (path.contains("/match/create")) {
             bucket = rateLimiterService.resolveBucket(key + "_create", 8, 8, Duration.ofMinutes(1));
         }
-        else if (path.contains("/api/match/start")) {
+        else if (path.contains("/match/start")) {
             bucket = rateLimiterService.resolveBucket(key + "_start", 15, 15, Duration.ofMinutes(1));
         }
         else if (path.contains("/user/add-cf")) {

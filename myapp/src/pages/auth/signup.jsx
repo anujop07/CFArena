@@ -32,8 +32,8 @@ export default function Signup() {
     event.preventDefault()
     setError('')
 
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim() || !form.cfHandle.trim()) {
-      setError('All fields are required.')
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      setError('Name, email, and password are required.')
       return
     }
 
@@ -48,7 +48,7 @@ export default function Signup() {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        cfHandle: form.cfHandle.trim(),
+        cfHandle: form.cfHandle.trim() || null,
       })
 
       navigate('/login', {
@@ -56,11 +56,13 @@ export default function Signup() {
         state: { justRegistered: true },
       })
     } catch (err) {
+      const data = err?.response?.data
       const message =
-        err?.response?.data?.message ||
-        err?.response?.data ||
+        data?.error ||
+        data?.message ||
+        (typeof data === 'string' ? data : null) ||
         'Unable to create account right now. Please try again.'
-      setError(typeof message === 'string' ? message : 'Signup failed.')
+      setError(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -122,7 +124,7 @@ export default function Signup() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="cfHandle">Codeforces Handle</label>
+              <label htmlFor="cfHandle">Codeforces Handle (Optional · Verified via OIDC)</label>
               <input
                 id="cfHandle"
                 name="cfHandle"
