@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const STEPS = [
   {
@@ -46,13 +47,13 @@ export default function Landing() {
 
       {/* NAV */}
       <nav style={{ ...s.nav, background: navSolid ? 'rgba(10,10,10,0.97)' : 'rgba(10,10,10,0.85)' }}>
-        <a href="/" style={s.logo}>CF<span style={{ color: '#c8ff00' }}>_</span>DUEL</a>
+        <Link to="/" style={s.logo}>CF<span style={{ color: '#c8ff00' }}>_</span>DUEL</Link>
         <div style={s.navLinks}>
           <a href="#how-it-works" style={s.navLink}>How it works</a>
           <a href="#features"     style={s.navLink}>Features</a>
-          <a href="/developers"   style={s.navLink}>Developers</a>
-          <a href="/login"        style={s.btnGhost}>Log in</a>
-          <a href="/signup"       style={s.btnPrimary}>Sign up free</a>
+          <Link to="/developers"   style={s.navLink}>Developers</Link>
+          <Link to="/login"        style={s.btnGhost}>Log in</Link>
+          <Link to="/signup"       style={s.btnPrimary}>Sign up free</Link>
         </div>
       </nav>
 
@@ -72,8 +73,8 @@ export default function Landing() {
           Race through curated problems and settle the ranking debate with real match pressure.
         </p>
         <div style={s.heroCta}>
-          <a href="/signup" style={s.btnPrimary}>Start dueling →</a>
-          <a href="/login" style={s.btnGhost}>I have an account</a>
+          <Link to="/signup" style={s.btnPrimary}>Start dueling →</Link>
+          <Link to="/login" style={s.btnGhost}>I have an account</Link>
         </div>
       </div>
     </section>
@@ -115,8 +116,8 @@ export default function Landing() {
             Create a free account. Link your handle. Issue a challenge.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <a href="/signup" style={s.btnPrimary}>Create free account →</a>
-            <a href="/login"  style={s.btnGhost}>Log in</a>
+            <Link to="/signup" style={s.btnPrimary}>Create free account →</Link>
+            <Link to="/login"  style={s.btnGhost}>Log in</Link>
           </div>
         </div>
       </div>

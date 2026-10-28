@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { API_PATHS } from '../../utils/apiPaths'
@@ -88,6 +88,16 @@ export default function TournamentCreate() {
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
 
+  useEffect(() => {
+    axiosInstance.get(API_PATHS.USER.ME)
+      .then((res) => {
+        if (!res.data?.codeforcesVerified && !res.data?.cfVerified) {
+          setError('Your Codeforces account is not verified. Please verify your Codeforces account before creating a tournament.')
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const totalRounds = Math.log2(maxPlayers)
 
   const showToast = (text, type = 'ok') => {
@@ -112,8 +122,12 @@ export default function TournamentCreate() {
       const res = await axiosInstance.post(API_PATHS.TOURNAMENT.CREATE, payload)
       showToast('Tournament created!')
 
-      // Navigate to tournament bracket page
-      setTimeout(() => navigate(`/tournament/${res.data.id}`), 500)
+      const tourneyId = res.data?.id || res.data?._id || res.data?.tournament?.id
+      if (tourneyId) {
+        setTimeout(() => navigate(`/tournament/${tourneyId}`), 400)
+      } else {
+        setTimeout(() => navigate('/tournaments'), 400)
+      }
     } catch (err) {
       const msg = err?.response?.data?.message || err?.response?.data || 'Failed to create tournament.'
       setError(typeof msg === 'string' ? msg : JSON.stringify(msg))

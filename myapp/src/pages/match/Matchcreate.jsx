@@ -451,6 +451,16 @@ export default function MatchCreate() {
   }, [])
 
   useEffect(() => {
+    axiosInstance.get(API_PATHS.USER.ME)
+      .then((res) => {
+        if (!res.data?.codeforcesVerified && !res.data?.cfVerified) {
+          setCreateError('Your Codeforces account is not verified. Please connect your Codeforces account via OIDC before creating a match.')
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (!match?.inviteCode) { setMatchStatus(null); return }
     loadMatchStatus(match.inviteCode)
     const t = setInterval(() => loadMatchStatus(match.inviteCode), 3000)

@@ -48,11 +48,13 @@ export default function Login() {
         login(token)   // ✅ updates context + localStorage
         navigate('/dashboard', { replace: true })
     } catch (err) {
+      const data = err?.response?.data
       const message =
-        err?.response?.data?.message ||
-        err?.response?.data ||
+        data?.error ||
+        data?.message ||
+        (typeof data === 'string' ? data : null) ||
         'Unable to sign in right now. Please try again.'
-      setError(typeof message === 'string' ? message : 'Login failed. Check your credentials.')
+      setError(message)
     } finally {
       setIsSubmitting(false)
     }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { API_PATHS } from '../../utils/apiPaths'
 import Navbar from '../../components/Navbar'
@@ -260,6 +260,7 @@ function PlayerCard({ handle, isYou, score, results, problems, isWin, isDraw }) 
 export default function Results() {
   const { inviteCode } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [match, setMatch]       = useState(null)
   const [myHandle, setMyHandle] = useState(null)
@@ -272,25 +273,71 @@ export default function Results() {
   }, [])
 
   useEffect(() => {
+    if (location?.state?.tournamentId) {
+      localStorage.setItem('activeTournamentId', location.state.tournamentId)
+      if (inviteCode) {
+        localStorage.setItem(`tournament_match_${inviteCode}`, location.state.tournamentId)
+      }
+    }
+  }, [location?.state?.tournamentId, inviteCode])
+
+  useEffect(() => {
     if (!inviteCode) return
     axiosInstance
       .get(`${API_PATHS.MATCH.STATUS}?inviteCode=${encodeURIComponent(inviteCode)}`)
-      .then((r) => setMatch(r?.data))
+      .then((r) => {
+        setMatch(r?.data)
+        if (r?.data?.tournamentId) {
+          localStorage.setItem('activeTournamentId', r.data.tournamentId)
+          localStorage.setItem(`tournament_match_${inviteCode}`, r.data.tournamentId)
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [inviteCode])
 
+  // Resolve tournament ID across match payload, router state, or scoped localStorage
+  const tournamentId =
+    match?.tournamentId ||
+    location?.state?.tournamentId ||
+    (inviteCode ? localStorage.getItem(`tournament_match_${inviteCode}`) : null) ||
+    (!match ? localStorage.getItem('activeTournamentId') : null) ||
+    null
+
+  const handleDashboard = () => {
+    if (tournamentId) {
+      navigate(`/tournament/${tournamentId}`)
+    } else {
+      navigate('/dashboard')
+    }
+  }
+
+  const navDashboardTo = tournamentId ? `/tournament/${tournamentId}` : '/dashboard'
+
   if (loading) return (
     <>
       <style>{css}</style>
-      <div className="rs"><Navbar /><main className="rs-main"><div className="rs-loading"><div className="rs-spinner" />Loading results…</div></main></div>
+      <div className="rs">
+        <Navbar dashboardTo={navDashboardTo} />
+        <main className="rs-main">
+          <div className="rs-loading">
+            <div className="rs-spinner" />
+            Loading results…
+          </div>
+        </main>
+      </div>
     </>
   )
 
   if (!match) return (
     <>
       <style>{css}</style>
-      <div className="rs"><Navbar /><main className="rs-main"><div className="rs-loading">Match not found.</div></main></div>
+      <div className="rs">
+        <Navbar dashboardTo={navDashboardTo} />
+        <main className="rs-main">
+          <div className="rs-loading">Match not found.</div>
+        </main>
+      </div>
     </>
   )
 
@@ -316,25 +363,37 @@ export default function Results() {
   const isMe = (handle) =>
     !!myHandle && !!handle && handle.toLowerCase() === myHandle.toLowerCase()
 
-
-
   return (
     <>
       <style>{css}</style>
       <div className="rs">
-        <Navbar />
+        <Navbar dashboardTo={navDashboardTo} />
         <main className="rs-main">
           <div className="rs-inner">
 
             <div className="rs-verdict">
-              <div className="rs-eyebrow">match complete</div>
+              <div className="rs-eyebrow">
+                {tournamentId ? (
+                  match?.bracketRound ? `tournament round ${match.bracketRound} complete` : 'tournament round complete'
+                ) : (
+                  'match complete'
+                )}
+              </div>
               <div className="rs-verdict-main">
                 {isDraw
                   ? <span className="draw">Draw.</span>
                   : <><span className="winner">{winner}</span>{' '}wins.</>
                 }
               </div>
-              <div className="rs-verdict-sub">// {inviteCode} · final results</div>
+              <div className="rs-verdict-sub">
+                {tournamentId ? (
+                  `// tournament round finished · view full standings in brackets`
+                ) : match.endedReason === 'CREATOR_STOPPED' ? (
+                  `// ${inviteCode} · match stopped by creator`
+                ) : (
+                  `// ${inviteCode} · final results`
+                )}
+              </div>
             </div>
 
             <div className="rs-battle">
@@ -386,8 +445,25 @@ export default function Results() {
             </div>
 
             <div className="rs-actions">
-              <button className="rs-btn-ghost" onClick={() => navigate('/dashboard')}>Dashboard</button>
-              <button className="rs-btn-cta"   onClick={() => navigate('/match/create')}>⚔ New Match</button>
+              {tournamentId ? (
+                <>
+                  <button className="rs-btn-cta" onClick={() => navigate(`/tournament/${tournamentId}`)}>
+                    🏆 Tournament Bracket
+                  </button>
+                  <button className="rs-btn-ghost" onClick={handleDashboard}>
+                    Dashboard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="rs-btn-cta" onClick={() => navigate('/match/create')}>
+                    ⚔ New Match
+                  </button>
+                  <button className="rs-btn-ghost" onClick={handleDashboard}>
+                    Dashboard
+                  </button>
+                </>
+              )}
             </div>
 
           </div>

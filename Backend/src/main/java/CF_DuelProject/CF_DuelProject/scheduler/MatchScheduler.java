@@ -18,13 +18,20 @@ public class MatchScheduler {
     private final PrimaryMatchRepository matchRepository;
     private final MatchService matchService;
 
-    @Scheduled(fixedRate = 5000)
+    // fixedDelay: the next tick starts 5 s after the previous one FINISHED. Codeforces calls are throttled to
+    // one per ~2 s, so a tick with many live matches can take a while and must not overlap itself.
+    @Scheduled(fixedDelay = 5000)
     public void runScheduler() {
 
         List<MatchPrimary> matches = matchRepository.findAll();
         log.debug("===== Scheduler Tick =====");
-            for (MatchPrimary match : matches) {
-            matchService.processMatch(match);
+        for (MatchPrimary match : matches) {
+            try {
+                matchService.processMatch(match);
+            } catch (Exception e) {
+                // one broken match must not stop the others from being scored
+                log.error("Processing match {} failed: {}", match.getInviteCode(), e.toString());
+            }
         }
     }
 }
