@@ -4,6 +4,8 @@ import dev1Img from '../assets/dev1.png'
 import dev2Img from '../assets/dev2.jpg'
 import dev3Img from '../assets/dev3.jpg'
 import dev4Img from '../assets/dev4.jpg'
+import dev5Img from '../assets/dev5.jpg'
+import dev6Img from '../assets/dev6.jpg'
 
 /* ─── SVG Icon Components ─── */
 const LinkedInIcon = () => (
@@ -424,6 +426,25 @@ const DEVELOPERS = [
     skills: ["React", "CSS", "Figma", "UI/UX"],
     linkedin: "https://linkedin.com/in/",
     github: "https://github.com/"
+  },
+  {
+    name: "Kartik Bhangale",
+    role: "Backend and DevOps",
+    img: dev5Img,
+    imgStyle: { objectPosition: "center 15%" },
+    desc: "Builds high-performance backend infrastructure and streamlines CI/CD DevOps workflows.",
+    skills: ["Java", "Spring Boot", "DevOps", "Docker", "CI/CD"],
+    linkedin: "https://linkedin.com/in/",
+    github: "https://github.com/"
+  },
+  {
+    name: "Mahesh Khose",
+    role: "Backend Developer",
+    img: dev6Img,
+    desc: "Engineers core backend services, robust API integrations, and database architectures.",
+    skills: ["Java", "Spring Boot", "REST APIs", "PostgreSQL", "Database Design"],
+    linkedin: "https://linkedin.com/in/",
+    github: "https://github.com/"
   }
 ]
 
@@ -486,7 +507,7 @@ export default function Developers() {
                 style={{ transitionDelay: `${i * 0.12}s` }}
               >
                 <div className="dev-img-wrap">
-                  <img src={dev.img} alt={dev.name} className="dev-img" />
+                  <img src={dev.img} alt={dev.name} className="dev-img" style={dev.imgStyle} />
                   <div className="dev-status" />
                 </div>
                 <h3 className="dev-name">{dev.name}</h3>

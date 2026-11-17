@@ -15,15 +15,23 @@ export default function History() {
     axiosInstance.get(API_PATHS.USER.ME)
       .then((res) => {
         setUser(res.data)
-        // 2. Automatically fetch that user's history!
-        return axiosInstance.get(`${API_PATHS.MATCH.HISTORY}/${res.data.cfHandle}`)
+        // 2. Fetch match history
+        return axiosInstance.get(API_PATHS.MATCH.HISTORY)
       })
       .then((res) => {
-        setHistory(res.data) // 3. Save the matches to React State
+        setHistory(res.data || []) // 3. Save the matches to React State
       })
       .catch((err) => console.error("Failed to fetch history:", err))
       .finally(() => setLoading(false))
   }, [])
+
+  const isUserWinner = (match) => {
+    if (!user || !match.winnerId || match.winnerId === 'DRAW' || match.winnerId === 'CANCELLED') return false
+    const w = match.winnerId.toLowerCase()
+    return (user.cfHandle && w === user.cfHandle.toLowerCase()) ||
+           (user.codeforcesHandle && w === user.codeforcesHandle.toLowerCase()) ||
+           (user.email && w === user.email.toLowerCase())
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#e8e8e0', fontFamily: 'monospace' }}>
@@ -42,12 +50,15 @@ export default function History() {
                 <h3 style={{ marginBottom: '10px' }}>
                   {match.user1} <span style={{ color: '#888', fontSize: '14px' }}>VS</span> {match.user2}
                 </h3>
-                <p style={{ color: match.winnerId === user?.id ? '#c8ff00' : '#ff4444' }}>
+                <p style={{ color: match.winnerId === 'DRAW' ? '#fb923c' : isUserWinner(match) ? '#c8ff00' : '#ff4444' }}>
                   Winner: {match.winnerId === 'DRAW' ? 'DRAW' : match.winnerId}
+                  {match.endedReason === 'CREATOR_STOPPED' && (
+                    <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px' }}>(Stopped by creator)</span>
+                  )}
                 </p>
                 <div style={{ fontSize: '12px', color: '#888', marginTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Score: {match.score1} - {match.score2}</span>
-                  <span>{new Date(match.endTime).toLocaleDateString()}</span>
+                  <span>{match.endTime ? new Date(match.endTime).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
             ))}

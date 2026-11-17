@@ -7,8 +7,7 @@ import Navbar from '../../components/Navbar'
 import { celebrateSolve } from './fireworks'
 
 // Strip any accidental /ws suffix — the SockJS URL below appends /ws itself.
-// VITE_WS_URL should be just the base (e.g. https://cfarena.in), NOT https://cfarena.in/ws
-const _RAW_WS_BASE = import.meta.env.VITE_WS_URL || 'http://localhost:8080'
+const _RAW_WS_BASE = import.meta.env.VITE_WS_URL || (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') ? window.location.origin : 'http://localhost:8080')
 const WS_BASE = _RAW_WS_BASE.replace(/\/ws\/?$/, '')
 
 function toResultsArray(val) {
@@ -287,6 +286,19 @@ const css = `
   }
   .mr-state.ac.just-ac { animation:acChipIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
+  /* ── Opponent Solved Banner ── */
+  .opp-solved-banner { position:fixed; top:28px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none; border-radius:var(--radius-lg); animation:oppBannerIn 0.4s cubic-bezier(0.22,1,0.36,1); box-shadow:0 12px 40px rgba(0,0,0,0.8), 0 0 35px rgba(255,107,107,0.35); }
+  .opp-solved-banner-inner { display:flex; align-items:center; gap:16px; padding:16px 26px 16px 18px; background:#120c10; border:1px solid rgba(255,107,107,0.45); border-left:4px solid var(--danger); border-radius:var(--radius-lg); position:relative; overflow:hidden; white-space:nowrap; }
+  .opp-solved-banner-inner::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,transparent 0%,rgba(255,107,107,0.18) 50%,transparent 100%); background-size:200% 100%; background-position:200% 0; animation:oppBannerScan 1.2s ease-out infinite; }
+  @keyframes oppBannerScan { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+  .opp-solved-banner-icon { width:36px; height:36px; border-radius:50%; background:rgba(255,107,107,0.14); border:1px solid rgba(255,107,107,0.35); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; animation:oppIconPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes oppIconPop { from{transform:scale(0) rotate(-45deg);opacity:0} to{transform:scale(1) rotate(0deg);opacity:1} }
+  .opp-solved-banner-text { display:flex; flex-direction:column; gap:3px; }
+  .opp-solved-banner-headline { font-size:14px; font-weight:700; letter-spacing:0.02em; color:#ff8080; display:flex; align-items:center; gap:8px; }
+  .opp-solved-banner-sub { font-size:11px; letter-spacing:0.06em; color:var(--text2); }
+  .opp-solved-banner-sub strong { color:var(--accent); font-weight:600; }
+  @keyframes oppBannerIn { from{opacity:0;transform:translateX(-50%) translateY(-24px) scale(0.92)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+
   /* ── Unlock banner ── */
   .unlock-banner { position:fixed; bottom:72px; left:50%; transform:translateX(-50%); z-index:400; pointer-events:none; border-radius:var(--radius); animation:bannerIn 0.4s cubic-bezier(0.22,1,0.36,1); box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 32px rgba(200,255,0,0.1); }
   .unlock-banner-inner { display:flex; align-items:center; gap:12px; padding:12px 22px 12px 14px; background:var(--panel3); border:1px solid var(--border2); border-left:3px solid var(--accent); border-radius:var(--radius); position:relative; overflow:hidden; white-space:nowrap; }
@@ -360,7 +372,20 @@ const css = `
   .mr-btn-skip:hover { background:var(--warn-bg); border-color:var(--warn); }
   .mr-btn-skip:disabled { opacity:0.3; cursor:not-allowed; }
   .mr-btn-skip.voted { color:var(--muted2); border-color:var(--border2); background:var(--panel2); cursor:default; }
-  .mr-state.skipped { color:var(--muted2); background:rgba(128,128,144,0.1); border:1px solid var(--border2); }
+  /* ── Stop Match Button & Modal ── */
+  .mr-btn-stop { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--danger); background:var(--danger-bg); border:1px solid rgba(255,107,107,0.3); padding:10px 18px; border-radius:var(--radius); cursor:pointer; transition:all .15s ease; white-space:nowrap; }
+  .mr-btn-stop:hover { background:rgba(255,107,107,0.18); border-color:var(--danger); box-shadow:0 0 16px rgba(255,107,107,0.25); transform:translateY(-1px); }
+  .mr-btn-stop:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+  .mr-modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(6,6,10,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .mr-modal { background:var(--panel); border:1px solid var(--border2); border-radius:var(--radius-lg); max-width:440px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.6), 0 0 24px rgba(255,107,107,0.1); }
+  .mr-modal-title { font-size:18px; font-weight:700; letter-spacing:-0.01em; margin-bottom:12px; color:var(--text); }
+  .mr-modal-body { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:24px; }
+  .mr-modal-actions { display:flex; justify-content:flex-end; gap:12px; }
+  .mr-modal-btn { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; padding:10px 20px; border-radius:var(--radius); cursor:pointer; transition:all .15s ease; }
+  .mr-modal-btn.cancel { background:transparent; border:1px solid var(--border2); color:var(--muted2); }
+  .mr-modal-btn.cancel:hover { background:var(--panel2); color:var(--text); }
+  .mr-modal-btn.confirm { background:var(--danger); border:1px solid var(--danger); color:#06060a; }
+  .mr-modal-btn.confirm:hover { opacity:0.9; box-shadow:0 0 16px rgba(255,107,107,0.4); }
 
   /* ── Responsive ── */
   @media (max-width:640px) {
@@ -459,13 +484,49 @@ function UnlockBanner({ problemName }) {
   )
 }
 
+function OpponentSolvedBanner({ problemLabel }) {
+  return (
+    <div className="opp-solved-banner">
+      <div className="opp-solved-banner-inner">
+        <div className="opp-solved-banner-icon">⚔️</div>
+        <div className="opp-solved-banner-text">
+          <span className="opp-solved-banner-headline">
+            Your opponent has completed this question! Move to the next question.
+          </span>
+          <span className="opp-solved-banner-sub">
+            {problemLabel ? `${problemLabel} solved · ` : ''}<strong>Proceed to the next question immediately</strong> to avoid losing time!
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// The backend is authoritative. A delayed WebSocket frame (or a slow poll response) must never roll the UI back
+// to an earlier state, so updates that are older than what is already shown are dropped.
+const STATUS_RANK = { WAITING: 0, READY: 1, ONGOING: 2, FINISHING: 2, FINISHED: 3 }
+function isStaleUpdate(prev, next) {
+  if (!prev || !next) return false
+  const pr = STATUS_RANK[prev.status] ?? 0
+  const nr = STATUS_RANK[next.status] ?? 0
+  if (nr < pr) return true
+  if (nr === pr) {
+    if ((next.curIdx ?? 0) < (prev.curIdx ?? 0)) return true
+    if ((next.score1 ?? 0) + (next.score2 ?? 0) < (prev.score1 ?? 0) + (prev.score2 ?? 0)) return true
+  }
+  return false
+}
+
 export default function MatchRoom() {
   const { inviteCode } = useParams()
   const { state }      = useLocation()
   const navigate       = useNavigate()
 
   const [match, setMatch]                 = useState(null)
-  const [myHandle, setMyHandle]           = useState(null)
+  // Latest accepted server state + offset between the server clock and this browser's clock.
+  const matchRef = useRef(null)
+  const clockSkewRef = useRef(0)
+  const [myHandle, setMyHandle]           = useState(() => localStorage.getItem('cfHandle') || null)
   const [myHandleReady, setMyHandleReady] = useState(false)
   const [timeLeft, setTimeLeft]           = useState(null)
   const [loadError, setLoadError]         = useState(null)
@@ -496,11 +557,16 @@ export default function MatchRoom() {
   const [scorePopMe,       setScorePopMe]       = useState(false)
   const [scorePopOpp,      setScorePopOpp]      = useState(false)
   const [unlockBanner,     setUnlockBanner]     = useState(null)
+  const [oppSolvedBanner,  setOppSolvedBanner]  = useState(null)
 
   // ── Skip vote state ──────────────────────────────────────
   const [skipVoteMe,  setSkipVoteMe]  = useState(false)
   const [skipVoteOpp, setSkipVoteOpp] = useState(false)
   const prevCurIdxForSkipRef = useRef(null)
+
+  // ── Stop match state ──────────────────────────────────────
+  const [showStopModal, setShowStopModal] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
 
   const wsRef          = useRef(null)
   const timerRef       = useRef(null)
@@ -581,9 +647,16 @@ export default function MatchRoom() {
       celebrateSolve()
     }
 
-    // 🔔 Desktop notification when opponent solves
+    // 🔔 Real-time popup notification and desktop notification when opponent completes/solves question
     if (oppNewSolves.length > 0) {
       const probs = Array.isArray(data?.problems) ? data.problems : []
+      const latestSolvedIdx = oppNewSolves[oppNewSolves.length - 1]
+      const solvedProblemLabel = parseProblem(probs[latestSolvedIdx], latestSolvedIdx).fullLabel
+      setOppSolvedBanner(solvedProblemLabel)
+      setTimeout(() => {
+        setOppSolvedBanner(null)
+      }, 5000)
+
       oppNewSolves.forEach(idx => {
         const pLabel = `Problem ${idx + 1}`
         const s1 = iAmUser1 ? (data?.score1 ?? 0) : (data?.score2 ?? 0)
@@ -611,7 +684,14 @@ export default function MatchRoom() {
 
   useEffect(() => {
     axiosInstance.get(API_PATHS.USER.ME)
-      .then(r => { setMyHandle(r?.data?.cfHandle || null); setMyHandleReady(true) })
+      .then(r => {
+        const h = r?.data?.cfHandle || r?.data?.codeforcesHandle || null
+        if (h) {
+          setMyHandle(h)
+          localStorage.setItem('cfHandle', h)
+        }
+        setMyHandleReady(true)
+      })
       .catch(() => { setMyHandleReady(true) })
   }, [])
 
@@ -619,7 +699,10 @@ export default function MatchRoom() {
     try {
       const res  = await axiosInstance.get(`${API_PATHS.MATCH.STATUS}?inviteCode=${encodeURIComponent(inviteCode)}`)
       const data = res?.data
+      if (data?.serverTime) clockSkewRef.current = new Date(data.serverTime).getTime() - Date.now()
+      if (data && isStaleUpdate(matchRef.current, data)) return
       if (data) {
+        matchRef.current = data
         const prev = prevStatusRef.current
         if ((prev === 'WAITING' || prev === 'READY') && data.status === 'ONGOING') {
           setShowLoading(true)
@@ -627,13 +710,28 @@ export default function MatchRoom() {
         }
         prevStatusRef.current = data.status
         detectChanges(data)
+        if (data?.tournamentId) {
+          localStorage.setItem('activeTournamentId', data.tournamentId)
+          localStorage.setItem(`tournament_match_${inviteCode}`, data.tournamentId)
+        }
         setMatch(data)
+
+        // Sync skip votes from match state so refresh or missed WS messages preserve skip state
+        const iAmUser1 = amIUser1Ref.current
+        if (data.skipVoteUser1 !== undefined && data.skipVoteUser2 !== undefined) {
+          setSkipVoteMe(iAmUser1 ? !!data.skipVoteUser1 : !!data.skipVoteUser2)
+          setSkipVoteOpp(iAmUser1 ? !!data.skipVoteUser2 : !!data.skipVoteUser1)
+        }
+
         // ✅ Use functional updater so this doesn't need showLoading in the dep array
         setShowLoading(prev => {
           if (prev && data.problems?.length > 0) setTimeout(() => setShowLoading(false), 600)
           return prev
         })
-        if (data.status === 'FINISHED') navigate(`/results/${inviteCode}`)
+        if (data.status === 'FINISHED') {
+          const tId = data.tournamentId || match?.tournamentId || null
+          navigate(`/results/${inviteCode}`, { state: { tournamentId: tId } })
+        }
       }
     } catch (err) {
       setLoadError(err?.response?.data?.message || err.message || 'Could not load match.')
@@ -657,36 +755,104 @@ export default function MatchRoom() {
   useEffect(() => { if (chatOpen) setUnreadCount(0) }, [chatOpen])
 
   // ── Send chat message ─────────────────────────────────────
-  const sendChat = () => {
+  const sendChat = async () => {
     const text = chatInput.trim()
-    if (!text || !wsRef.current) return
-    wsRef.current.send('/app/match/chat', {}, JSON.stringify({
-      inviteCode,
-      sender: myHandle || 'you',
-      text,
-    }))
+    if (!text) return
+    const normCode = (inviteCode || '').trim().toUpperCase()
+    const token = localStorage.getItem('token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}`, authorization: `Bearer ${token}` } : {}
+
     setChatInput('')
+
+    let sentViaWs = false
+    if (wsRef.current && wsRef.current.connected) {
+      try {
+        wsRef.current.send('/app/match/chat', headers, JSON.stringify({
+          inviteCode: normCode,
+          sender: myHandle || 'you',
+          text,
+        }))
+        sentViaWs = true
+      } catch (err) {
+        console.warn('WS sendChat failed, falling back to REST:', err)
+      }
+    }
+
+    if (!sentViaWs) {
+      try {
+        await axiosInstance.post(API_PATHS.MATCH.CHAT, {
+          inviteCode: normCode,
+          sender: myHandle || 'you',
+          text,
+        })
+      } catch (err) {
+        console.error('Failed to send chat message:', err)
+        showToast('Failed to send chat message', 'error')
+      }
+    }
   }
 
   // ── Send emote ────────────────────────────────────────────
-  const sendEmote = (emote) => {
-    if (!wsRef.current) return
-    wsRef.current.send('/app/match/emote', {}, JSON.stringify({
-      inviteCode,
-      sender: myHandle || 'you',
-      emote,
-    }))
+  const sendEmote = async (emote) => {
+    if (!emote) return
+    const normCode = (inviteCode || '').trim().toUpperCase()
+    const token = localStorage.getItem('token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}`, authorization: `Bearer ${token}` } : {}
+
+    let sentViaWs = false
+    if (wsRef.current && wsRef.current.connected) {
+      try {
+        wsRef.current.send('/app/match/emote', headers, JSON.stringify({
+          inviteCode: normCode,
+          sender: myHandle || 'you',
+          emote,
+        }))
+        sentViaWs = true
+      } catch (err) {
+        console.warn('WS sendEmote failed, falling back to REST:', err)
+      }
+    }
+
+    if (!sentViaWs) {
+      try {
+        await axiosInstance.post(API_PATHS.MATCH.EMOTE, {
+          inviteCode: normCode,
+          sender: myHandle || 'you',
+          emote,
+        })
+      } catch (err) {
+        console.warn('REST sendEmote failed:', err)
+      }
+    }
   }
 
   // ── Send skip vote ────────────────────────────────────────
-  const sendSkipVote = () => {
-    if (!wsRef.current || skipVoteMe) return
+  const sendSkipVote = async () => {
+    if (skipVoteMe) return
+    const normCode = (inviteCode || '').trim().toUpperCase()
     setSkipVoteMe(true)
-    wsRef.current.send('/app/match/skip', {}, JSON.stringify({
-      inviteCode,
-      sender: myHandle || 'you',
-    }))
     showToast('You voted to skip. Waiting for opponent…')
+
+    const token = localStorage.getItem('token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}`, authorization: `Bearer ${token}` } : {}
+
+    if (wsRef.current && wsRef.current.connected) {
+      try {
+        wsRef.current.send('/app/match/skip', headers, JSON.stringify({
+          inviteCode: normCode,
+          sender: myHandle || 'you',
+        }))
+      } catch (err) {
+        console.warn('WS skip vote error:', err)
+      }
+    }
+
+    // Always invoke REST fallback as well so skip vote is guaranteed to be persisted and counted
+    try {
+      await axiosInstance.post(`${API_PATHS.MATCH.SKIP}?inviteCode=${encodeURIComponent(normCode)}`)
+    } catch (err) {
+      console.warn('REST skip vote failed:', err)
+    }
   }
 
   // ── Trigger floating emote animation ─────────────────────
@@ -698,89 +864,142 @@ export default function MatchRoom() {
   }
 
   useEffect(() => {
-    const s1 = document.createElement('script')
-    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js'
-    s1.onload = () => {
-      const s2 = document.createElement('script')
-      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js'
-      s2.onload = () => {
-        try {
-          // WS_BASE is an https:// URL; SockJS accepts http/https and upgrades to wss automatically.
-          const sock   = new window.SockJS(`${WS_BASE}/ws`)
-          const client = window.Stomp.over(sock)
-          client.debug = null
-          client.connect({}, () => {
-            // ── Existing: match score updates ──────────────
-            client.subscribe(`/topic/match/${inviteCode}`, msg => {
-              try {
-                const data = JSON.parse(msg.body)
-                const prev = prevStatusRef.current
-                if ((prev === 'WAITING' || prev === 'READY') && data.status === 'ONGOING') {
-                  setShowLoading(true)
-                  setTimeout(() => setShowLoading(false), data.problems?.length > 0 ? 800 : 2000)
-                }
-                prevStatusRef.current = data.status
-                detectChanges(data)
-                setMatch(data)
-                if (data?.status === 'FINISHED') navigate(`/results/${inviteCode}`)
-              } catch {}
-            })
+    const normCode = (inviteCode || '').trim().toUpperCase()
+    let client = null
+    let active = true
 
-            // ── NEW: real-time chat ────────────────────────
-            client.subscribe(`/topic/match/${inviteCode}/chat`, msg => {
-              try {
-                const data = JSON.parse(msg.body)
-                setChatMsgs(prev => [...prev, data])
-                setChatOpen(prev => {
-                  if (!prev) setUnreadCount(c => c + 1)
-                  return prev
-                })
-                // 🔔 Notify for opponent's chat messages
-                if (data.sender !== (myHandle || 'you')) {
-                  notify('💬 CF Arena', `${data.sender}: ${data.text}`)
-                }
-              } catch {}
-            })
+    const connectWs = () => {
+      if (!window.SockJS || !window.Stomp || !active) return
+      try {
+        const sock = new window.SockJS(`${WS_BASE}/ws`)
+        client = window.Stomp.over(sock)
+        client.debug = null
 
-            // ── NEW: emote reactions ───────────────────────
-            client.subscribe(`/topic/match/${inviteCode}/emotes`, msg => {
-              try {
-                const data = JSON.parse(msg.body)
-                triggerFloatEmote(data.emote)
-              } catch {}
-            })
+        const token = localStorage.getItem('token') || ''
+        const headers = token ? { Authorization: `Bearer ${token}`, authorization: `Bearer ${token}` } : {}
 
-            // ── NEW: skip vote notifications ───────────────
-            client.subscribe(`/topic/match/${inviteCode}/skip`, msg => {
-              try {
-                const data = JSON.parse(msg.body)
-                // Backend sends skipVoteUser1 + skipVoteUser2 booleans.
-                // Map them to "me" vs "opponent" using amIUser1Ref.
-                const iAmUser1 = amIUser1Ref.current
-                const myVoteFlag   = iAmUser1 ? data.skipVoteUser1 : data.skipVoteUser2
-                const oppVoteFlag  = iAmUser1 ? data.skipVoteUser2 : data.skipVoteUser1
-                if (myVoteFlag)  setSkipVoteMe(true)
-                if (oppVoteFlag) {
-                  setSkipVoteOpp(true)
-                  showToast('Opponent wants to skip!')
-                  notify('⊘ CF Arena', 'Opponent wants to skip the current problem')
-                }
-              } catch {}
-            })
+        client.connect(headers, () => {
+          if (!active) {
+            client.disconnect()
+            return
+          }
+
+          // ── Match score & status updates ──────────────
+          client.subscribe(`/topic/match/${normCode}`, msg => {
+            try {
+              const data = JSON.parse(msg.body)
+              if (isStaleUpdate(matchRef.current, data)) return
+              matchRef.current = data
+              const prev = prevStatusRef.current
+              if ((prev === 'WAITING' || prev === 'READY') && data.status === 'ONGOING') {
+                setShowLoading(true)
+                setTimeout(() => setShowLoading(false), data.problems?.length > 0 ? 800 : 2000)
+              }
+              prevStatusRef.current = data.status
+              detectChanges(data)
+              if (data?.tournamentId) {
+                localStorage.setItem('activeTournamentId', data.tournamentId)
+                localStorage.setItem(`tournament_match_${normCode}`, data.tournamentId)
+              }
+              setMatch(data)
+
+              // Sync skip votes from match state
+              const iAmUser1 = amIUser1Ref.current
+              if (data.skipVoteUser1 !== undefined && data.skipVoteUser2 !== undefined) {
+                setSkipVoteMe(iAmUser1 ? !!data.skipVoteUser1 : !!data.skipVoteUser2)
+                setSkipVoteOpp(iAmUser1 ? !!data.skipVoteUser2 : !!data.skipVoteUser1)
+              }
+
+              if (data?.status === 'FINISHED') {
+                const tId = data?.tournamentId || match?.tournamentId || null
+                navigate(`/results/${normCode}`, { state: { tournamentId: tId } })
+              }
+            } catch {}
           })
+
+          // ── Real-time chat ────────────────────────
+          client.subscribe(`/topic/match/${normCode}/chat`, msg => {
+            try {
+              const data = JSON.parse(msg.body)
+              setChatMsgs(prev => [...prev, data])
+              setChatOpen(prev => {
+                if (!prev) setUnreadCount(c => c + 1)
+                return prev
+              })
+              const fromMe = data.sender === 'you' || (myHandle && data.sender?.trim().toLowerCase() === myHandle.trim().toLowerCase())
+              if (!fromMe) {
+                notify('💬 CF Arena', `${data.sender}: ${data.text}`)
+              }
+            } catch {}
+          })
+
+          // ── Emote reactions ───────────────────────
+          client.subscribe(`/topic/match/${normCode}/emotes`, msg => {
+            try {
+              const data = JSON.parse(msg.body)
+              triggerFloatEmote(data.emote)
+            } catch {}
+          })
+
+          // ── Skip vote notifications ───────────────
+          client.subscribe(`/topic/match/${normCode}/skip`, msg => {
+            try {
+              const data = JSON.parse(msg.body)
+              const iAmUser1 = amIUser1Ref.current
+              const myVoteFlag   = iAmUser1 ? data.skipVoteUser1 : data.skipVoteUser2
+              const oppVoteFlag  = iAmUser1 ? data.skipVoteUser2 : data.skipVoteUser1
+              if (myVoteFlag)  setSkipVoteMe(true)
+              if (oppVoteFlag) {
+                setSkipVoteOpp(true)
+                showToast('Opponent wants to skip!')
+                notify('⊘ CF Arena', 'Opponent wants to skip the current problem')
+              }
+            } catch {}
+          })
+
+          // ── Match stopped notification ────────────
+          client.subscribe(`/topic/match/${normCode}/stopped`, () => {
+            try {
+              clearInterval(timerRef.current)
+              showToast('Match stopped by creator.')
+              const tId = match?.tournamentId || (normCode ? localStorage.getItem(`tournament_match_${normCode}`) : null)
+              navigate(`/results/${normCode}`, { state: { tournamentId: tId } })
+            } catch {}
+          })
+
           wsRef.current = client
-        } catch {}
+        }, (err) => {
+          console.warn('WS error/disconnected:', err)
+          if (active) setTimeout(connectWs, 3000)
+        })
+      } catch (err) {
+        if (active) setTimeout(connectWs, 3000)
       }
-      document.head.appendChild(s2)
     }
-    document.head.appendChild(s1)
-    return () => { try { wsRef.current?.disconnect?.() } catch {} }
-  }, [inviteCode, navigate, detectChanges])
+
+    if (window.SockJS && window.Stomp) {
+      connectWs()
+    } else {
+      const timer = setInterval(() => {
+        if (window.SockJS && window.Stomp) {
+          clearInterval(timer)
+          connectWs()
+        }
+      }, 200)
+      setTimeout(() => clearInterval(timer), 5000)
+    }
+
+    return () => {
+      active = false
+      try { client?.disconnect?.() } catch {}
+      try { wsRef.current?.disconnect?.() } catch {}
+    }
+  }, [inviteCode, myHandle, navigate, detectChanges, notify])
 
   useEffect(() => {
     if (!match?.endTime || match.status !== 'ONGOING') { clearInterval(timerRef.current); return }
     const tick = () => {
-      const left = new Date(match.endTime).getTime() - Date.now()
+      const left = new Date(match.endTime).getTime() - (Date.now() + clockSkewRef.current)
       setTimeLeft(left)
       if (left <= 0) { clearInterval(timerRef.current); fetchStatus() }
     }
@@ -790,21 +1009,34 @@ export default function MatchRoom() {
 
   useEffect(() => {
     if (!match) return
-    if ((match?.curIdx ?? 0) > 5) navigate(`/results/${inviteCode}`)
+    if ((match?.curIdx ?? 0) > 5) {
+      const tId = match.tournamentId || (inviteCode ? localStorage.getItem(`tournament_match_${inviteCode}`) : null)
+      navigate(`/results/${inviteCode}`, { state: { tournamentId: tId } })
+    }
   }, [match, navigate, inviteCode])
 
-  const amIUser1 = myHandleReady
-    ? (myHandle ? match?.user1?.toLowerCase() === myHandle.toLowerCase() : navRole === 'host')
-    : navRole === 'host'
+  const isParticipant1 = myHandle && (
+    (match?.user1 && match.user1.toLowerCase() === myHandle.toLowerCase()) ||
+    (match?.player1CFHandle && match.player1CFHandle.toLowerCase() === myHandle.toLowerCase())
+  )
+  const isParticipant2 = myHandle && (
+    (match?.user2 && match.user2.toLowerCase() === myHandle.toLowerCase()) ||
+    (match?.player2CFHandle && match.player2CFHandle.toLowerCase() === myHandle.toLowerCase())
+  )
+  const isParticipant = !!isParticipant1 || !!isParticipant2
+
+  // If user is not participant 1 or 2, they are in spectator/referee monitor mode
+  const isSpectator = !isParticipant && (navRole === 'spectator' || !!match?.tournamentId || (!isParticipant1 && !isParticipant2 && myHandleReady && myHandle))
+
+  const amIUser1 = isSpectator ? true : (isParticipant1 || (navRole === 'host' && !isParticipant2))
   amIUser1Ref.current = amIUser1
 
-  const isHost  = amIUser1
-  const isGuest = myHandleReady && myHandle
-    ? match?.user2?.toLowerCase() === myHandle.toLowerCase()
-    : navRole === 'guest'
+  const isTournamentMatch = Boolean(match?.tournamentId)
+  const isHost = !isTournamentMatch && (isParticipant1 || (!isSpectator && navRole === 'host'))
+  const isGuest = isParticipant2 || (!isSpectator && navRole === 'guest')
 
-  const meHandle  = amIUser1 ? match?.user1 : match?.user2
-  const oppHandle = amIUser1 ? match?.user2 : match?.user1
+  const meHandle  = isSpectator ? match?.user1 : (amIUser1 ? match?.user1 : match?.user2)
+  const oppHandle = isSpectator ? match?.user2 : (amIUser1 ? match?.user2 : match?.user1)
 
   // Fetch avatars whenever handles are confirmed
   useEffect(() => {
@@ -818,8 +1050,9 @@ export default function MatchRoom() {
       fetchCFAvatar(oppHandle).then(url => { if(url) setOppAvatar(url) })
     }
   }, [oppHandle])
-  const meScore   = amIUser1 ? (match?.score1 ?? 0) : (match?.score2 ?? 0)
-  const oppScore  = amIUser1 ? (match?.score2 ?? 0) : (match?.score1 ?? 0)
+
+  const meScore   = isSpectator ? (match?.score1 ?? 0) : (amIUser1 ? (match?.score1 ?? 0) : (match?.score2 ?? 0))
+  const oppScore  = isSpectator ? (match?.score2 ?? 0) : (amIUser1 ? (match?.score2 ?? 0) : (match?.score1 ?? 0))
 
   const problems      = Array.isArray(match?.problems) ? match.problems : []
   const totalProblems = problems.length || 1
@@ -833,19 +1066,28 @@ export default function MatchRoom() {
   const timerUrgent   = timeLeft !== null && timeLeft < 5 * 60 * 1000
   const guestJoined   = match?.user2 != null
   const guestReady    = guestJoined && matchStatus === 'READY'
-  const canClickReady = !isHost && !guestJoined && navRole === 'guest'
+  const canClickReady = !isTournamentMatch && !isHost && !guestJoined && navRole === 'guest' && !isSpectator
+
+  const isMine = useCallback((sender) => {
+    if (!sender) return false
+    if (sender === 'you') return true
+    if (myHandle && sender.trim().toLowerCase() === myHandle.trim().toLowerCase()) return true
+    return false
+  }, [myHandle])
 
   const dotClass  = isOngoing ? 'live' : matchStatus === 'FINISHED' ? 'done' : 'waiting'
   const statusTxt = !match ? 'Loading…'
+    : isSpectator ? (isOngoing ? '👁 Monitoring match — live scores & progress' : '👁 Match finished')
     : isOngoing ? 'Live — match in progress'
     : matchStatus === 'FINISHED' ? 'Match finished'
+    : isTournamentMatch ? 'Competition Match · Waiting for referee to start round…'
     : matchStatus === 'READY' ? 'Both players ready — host can start'
     : 'Waiting for player 2 to join…'
 
   function myProblemState(i) {
     const results = toResultsArray(match?.player1Results)
     const oppResults = toResultsArray(match?.player2Results)
-    const myR  = amIUser1 ? results[i]    : oppResults[i]
+    const myR  = isSpectator ? results[i] : (amIUser1 ? results[i] : oppResults[i])
     if (myR === 'SOLVED') return 'solved'
     if (myR === 'SKIPPED') return 'skipped'
     if (i === curIdx) return 'current'
@@ -854,7 +1096,7 @@ export default function MatchRoom() {
   function oppProblemState(i) {
     const results = toResultsArray(match?.player1Results)
     const oppResults = toResultsArray(match?.player2Results)
-    const oppR = amIUser1 ? oppResults[i] : results[i]
+    const oppR = isSpectator ? oppResults[i] : (amIUser1 ? oppResults[i] : results[i])
     if (oppR === 'SOLVED') return 'solved'
     if (oppR === 'SKIPPED') return 'skipped'
     if (i === curIdx) return 'working'
@@ -873,8 +1115,31 @@ export default function MatchRoom() {
   const renderAvatar = (handle, size = '48px') => {
     const av = handle === meHandle ? meAvatar : handle === oppHandle ? oppAvatar : null
     const glowCol = handle === meHandle ? '#c8ff00' : '#ff6b6b'
-    if (!av || !handle || handle === 'waiting…') return null
-    return <img src={av} alt={handle} style={{ width: size, height: size, borderRadius: '50%', border: `1px solid ${glowCol}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 12px ${glowCol}33` }} />
+    if (!handle || handle === 'waiting…') return null
+    if (!av) {
+      return (
+        <div style={{
+          width: size, height: size, borderRadius: '50%', border: `1px solid ${glowCol}`,
+          background: '#161616', color: glowCol, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontWeight: '700', fontSize: '16px', flexShrink: 0
+        }}>
+          {handle.charAt(0).toUpperCase()}
+        </div>
+      )
+    }
+    return (
+      <img
+        src={av}
+        alt={handle}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+          if (e.currentTarget.nextElementSibling) {
+            e.currentTarget.nextElementSibling.style.display = 'flex';
+          }
+        }}
+        style={{ width: size, height: size, borderRadius: '50%', border: `1px solid ${glowCol}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 12px ${glowCol}33` }}
+      />
+    )
   }
 
   const onReady = async () => {
@@ -903,11 +1168,57 @@ export default function MatchRoom() {
     } catch { showToast('Copy failed.', 'error') }
   }
 
+  const handleStopMatch = async () => {
+    setIsStopping(true)
+    try {
+      await axiosInstance.post(API_PATHS.MATCH.STOP(inviteCode))
+      setShowStopModal(false)
+      clearInterval(timerRef.current)
+      showToast('Match stopped by creator.')
+      const tId = match?.tournamentId || (inviteCode ? localStorage.getItem(`tournament_match_${inviteCode}`) : null)
+      navigate(`/results/${inviteCode}`, { state: { tournamentId: tId } })
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to stop match.', 'error')
+      setIsStopping(false)
+    }
+  }
+
   return (
     <>
       <style>{css}</style>
       {showLoading && <LoadingScreen />}
+      {oppSolvedBanner && <OpponentSolvedBanner problemLabel={oppSolvedBanner} />}
       {unlockBanner && <UnlockBanner problemName={unlockBanner} />}
+
+      {/* ── Stop Match Confirmation Modal ── */}
+      {showStopModal && (
+        <div className="mr-modal-overlay" onClick={() => !isStopping && setShowStopModal(false)}>
+          <div className="mr-modal" onClick={e => e.stopPropagation()}>
+            <div className="mr-modal-title">Stop Match</div>
+            <div className="mr-modal-body">
+              Stop this match? This will end the match for both players.
+            </div>
+            <div className="mr-modal-actions">
+              <button
+                type="button"
+                className="mr-modal-btn cancel"
+                onClick={() => setShowStopModal(false)}
+                disabled={isStopping}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="mr-modal-btn confirm"
+                onClick={handleStopMatch}
+                disabled={isStopping}
+              >
+                {isStopping ? 'Stopping…' : 'Stop Match'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Floating Emote Overlay ── */}
       <div className="mr-emote-overlay">
@@ -917,7 +1228,7 @@ export default function MatchRoom() {
       </div>
 
       {/* ── Chat Box (fixed bottom-right) ── */}
-      {isOngoing && (
+      {(isOngoing || matchStatus === 'WAITING' || matchStatus === 'READY') && (
         <div className="mr-chat">
           {chatOpen && (
             <div className="mr-chat-panel">
@@ -931,7 +1242,7 @@ export default function MatchRoom() {
               <div className="mr-chat-msgs">
                 {chatMsgs.length === 0 && <div className="mr-chat-empty">No messages yet. Say something!</div>}
                 {chatMsgs.map((m, i) => (
-                  <div key={i} className={`mr-chat-msg ${m.sender === (myHandle || 'you') ? 'mine' : ''}`}>
+                  <div key={i} className={`mr-chat-msg ${isMine(m.sender) ? 'mine' : ''}`}>
                     <span className="mr-chat-sender">{m.sender}</span>
                     <div className="mr-chat-bubble">{m.text}</div>
                   </div>
@@ -966,22 +1277,74 @@ export default function MatchRoom() {
       )}
 
       <div className="mr">
-        <Navbar onCfSaved={() => showToast('CF handle updated!')} />
+        <Navbar
+          onCfSaved={() => showToast('CF handle updated!')}
+          dashboardTo={match?.tournamentId ? `/tournament/${match.tournamentId}` : '/dashboard'}
+        />
         <main className="mr-main">
           <div className="mr-topbar">
             <div>
-              <div className="mr-tag">CF Arena · Match Room</div>
+              <div className="mr-tag">
+                CF Arena · {isSpectator ? 'Referee & Spectator Monitor' : 'Match Room'}
+              </div>
               <div className="mr-title">code_<em>{inviteCode}</em></div>
             </div>
-            {isOngoing && (
-              <div className="mr-timer-block">
-                <div className={`mr-timer ${timerUrgent ? 'urgent' : ''}`}>
-                  {timeLeft !== null ? formatTime(timeLeft) : '--:--'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              {isOngoing && isHost && !isSpectator && (
+                <button
+                  type="button"
+                  className="mr-btn-stop"
+                  onClick={() => setShowStopModal(true)}
+                  disabled={isStopping}
+                >
+                  {isStopping ? 'Stopping…' : '■ Stop Match'}
+                </button>
+              )}
+              {isOngoing && (
+                <div className="mr-timer-block">
+                  <div className={`mr-timer ${timerUrgent ? 'urgent' : ''}`}>
+                    {timeLeft !== null ? formatTime(timeLeft) : '--:--'}
+                  </div>
+                  <div className="mr-timer-lbl">time remaining</div>
                 </div>
-                <div className="mr-timer-lbl">time remaining</div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {isSpectator && (
+            <div style={{
+              background: 'rgba(200,255,0,0.06)',
+              border: '1px solid rgba(200,255,0,0.2)',
+              borderRadius: 'var(--radius)',
+              padding: '10px 16px',
+              fontSize: '11px',
+              letterSpacing: '0.08em',
+              color: 'var(--accent)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span>⚖ REFEREE / SPECTATOR VIEW: Live match monitoring active.</span>
+              {match?.tournamentId && (
+                <button
+                  onClick={() => navigate(`/tournament/${match.tournamentId}`)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--accent)',
+                    color: 'var(--accent)',
+                    borderRadius: '2px',
+                    padding: '4px 10px',
+                    fontFamily: 'var(--mono)',
+                    fontSize: '10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Back to Bracket
+                </button>
+              )}
+            </div>
+          )}
 
           <div className={`mr-status ${isOngoing ? 'live' : ''}`}>
             <span className={`mr-dot ${dotClass}`} />
@@ -1033,22 +1396,43 @@ export default function MatchRoom() {
               </div>
               <div className="mr-lobby-foot">
                 <div className="mr-hint">
-                  {isHost
+                  {isTournamentMatch
+                    ? (isSpectator
+                        ? 'Spectating competition lobby: waiting for tournament referee to start the round.'
+                        : 'Competition Match · The match will start automatically as soon as the tournament host/referee begins the round.')
+                    : isSpectator
+                    ? 'Spectating lobby: waiting for players to ready up and host to start.'
+                    : isHost
                     ? guestReady ? <>Opponent is ready. <em>Start when you are.</em></> : 'Share the code. Start unlocks once opponent clicks Ready.'
                     : guestJoined ? "You're in. Waiting for host to start." : <>Click <em>Ready Up</em> to signal you're set.</>}
                 </div>
-                {isHost && (
-                  <button className="mr-btn-primary" onClick={onStart} disabled={!guestReady || isStarting}>
-                    {isStarting ? 'Starting…' : guestReady ? '⚔ Start Match' : 'Awaiting…'}
-                  </button>
-                )}
-                {canClickReady && (
-                  <button className="mr-btn-primary" onClick={onReady} disabled={isReadying}>
-                    {isReadying ? 'Joining…' : '✓ Ready Up'}
-                  </button>
-                )}
-                {!isHost && navRole !== 'host' && guestJoined && (
-                  <button className="mr-btn-primary" disabled>Waiting for host…</button>
+                {isTournamentMatch ? (
+                  <>
+                    <button className="mr-btn-primary" disabled style={{ opacity: 0.85, cursor: 'default' }}>
+                      ⏳ Waiting for referee to start round
+                    </button>
+                    {isSpectator && match?.tournamentId && (
+                      <button className="mr-btn-primary" onClick={() => navigate(`/tournament/${match.tournamentId}`)}>
+                        🏆 Open Bracket
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {!isSpectator && isHost && (
+                      <button className="mr-btn-primary" onClick={onStart} disabled={!guestReady || isStarting}>
+                        {isStarting ? 'Starting…' : guestReady ? '⚔ Start Match' : 'Awaiting…'}
+                      </button>
+                    )}
+                    {canClickReady && (
+                      <button className="mr-btn-primary" onClick={onReady} disabled={isReadying}>
+                        {isReadying ? 'Joining…' : '✓ Ready Up'}
+                      </button>
+                    )}
+                    {!isSpectator && !isHost && navRole !== 'host' && guestJoined && (
+                      <button className="mr-btn-primary" disabled>Waiting for host…</button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1061,7 +1445,7 @@ export default function MatchRoom() {
                   <div className="mr-score-handle" style={{ display: 'flex', alignItems: 'center' }}>
                     {renderAvatar(meHandle, '24px')}
                     <span className="mr-score-handle-pip" />
-                    {meHandle || 'you'}&nbsp;·&nbsp;you
+                    {meHandle || (isSpectator ? 'Player 1' : 'you')}&nbsp;·&nbsp;{isSpectator ? 'Player 1' : 'you'}
                   </div>
                   <div className="mr-score-ring-wrap">
                     <ScoreRing score={meScore} total={totalProblems} isMe={true} />
@@ -1071,7 +1455,7 @@ export default function MatchRoom() {
                 <div className="mr-score-vs"><div className="mr-vs-inner">VS</div></div>
                 <div className={`mr-score-opp ${scorePopOpp ? 'score-pop' : ''}`}>
                   <div className="mr-score-handle" style={{ display: 'flex', alignItems: 'center' }}>
-                    {oppHandle || 'opponent'}
+                    {oppHandle || (isSpectator ? 'Player 2' : 'opponent')}
                     <span className="mr-score-handle-pip" style={{ background: '#ff6b6b', boxShadow: 'none' }} />
                     {renderAvatar(oppHandle, '24px')}
                   </div>
@@ -1085,14 +1469,14 @@ export default function MatchRoom() {
               <div className="mr-progress-section">
                 <div className="mr-prog-card">
                   <div className="mr-prog-head">
-                    <span className="mr-prog-label">Your progress</span>
+                    <span className="mr-prog-label">{isSpectator ? (meHandle || 'Player 1') : 'Your progress'}</span>
                     <span className="mr-prog-pct me">{mePct}%</span>
                   </div>
                   <div className="mr-prog-track"><div className="mr-prog-fill me" style={{ width: `${mePct}%` }} /></div>
                 </div>
                 <div className="mr-prog-card">
                   <div className="mr-prog-head">
-                    <span className="mr-prog-label">{oppHandle || 'Opponent'}</span>
+                    <span className="mr-prog-label">{oppHandle || (isSpectator ? 'Player 2' : 'Opponent')}</span>
                     <span className="mr-prog-pct opp">{oppPct}%</span>
                   </div>
                   <div className="mr-prog-track"><div className="mr-prog-fill opp" style={{ width: `${oppPct}%` }} /></div>
@@ -1103,8 +1487,8 @@ export default function MatchRoom() {
                 <div className="mr-prob-table-head">
                   <span className="mr-th">#</span>
                   <span className="mr-th">Problem</span>
-                  <span className="mr-th center">You</span>
-                  <span className="mr-th center">{oppHandle || 'Opponent'}</span>
+                  <span className="mr-th center">{isSpectator ? (meHandle || 'Player 1') : 'You'}</span>
+                  <span className="mr-th center">{oppHandle || (isSpectator ? 'Player 2' : 'Opponent')}</span>
                 </div>
                 {problems.map((raw, i) => {
                   const { fullLabel, url } = parseProblem(raw, i)
@@ -1162,19 +1546,29 @@ export default function MatchRoom() {
               {curIdx < problems.length && (
                 <div className="mr-skip-bar">
                   <div className="mr-skip-status">
-                    {skipVoteMe  && <span>You: <span className="check">✓ voted</span></span>}
-                    {skipVoteOpp && <span>Opponent: <span className="check">✓ voted</span></span>}
-                    {!skipVoteMe && !skipVoteOpp && <span>Both players must agree to skip</span>}
-                    {skipVoteMe && !skipVoteOpp && <span style={{color:'var(--muted)'}}>· waiting for opponent…</span>}
-                    {!skipVoteMe && skipVoteOpp && <span style={{color:'var(--warn)'}}>· opponent wants to skip!</span>}
+                    {isSpectator ? (
+                      <span>
+                        Skip votes: {skipVoteMe ? 'Player 1 voted' : 'Player 1 not voted'} · {skipVoteOpp ? 'Player 2 voted' : 'Player 2 not voted'}
+                      </span>
+                    ) : (
+                      <>
+                        {skipVoteMe  && <span>You: <span className="check">✓ voted</span></span>}
+                        {skipVoteOpp && <span>Opponent: <span className="check">✓ voted</span></span>}
+                        {!skipVoteMe && !skipVoteOpp && <span>Both players must agree to skip</span>}
+                        {skipVoteMe && !skipVoteOpp && <span style={{color:'var(--muted)'}}>· waiting for opponent…</span>}
+                        {!skipVoteMe && skipVoteOpp && <span style={{color:'var(--warn)'}}>· opponent wants to skip!</span>}
+                      </>
+                    )}
                   </div>
-                  <button
-                    className={`mr-btn-skip ${skipVoteMe ? 'voted' : ''}`}
-                    onClick={sendSkipVote}
-                    disabled={skipVoteMe}
-                  >
-                    {skipVoteMe ? '⊘ Vote Sent' : '⊘ Vote to Skip'}
-                  </button>
+                  {!isSpectator && (
+                    <button
+                      className={`mr-btn-skip ${skipVoteMe ? 'voted' : ''}`}
+                      onClick={sendSkipVote}
+                      disabled={skipVoteMe}
+                    >
+                      {skipVoteMe ? '⊘ Vote Sent' : '⊘ Vote to Skip'}
+                    </button>
+                  )}
                 </div>
               )}
             </>

@@ -15,4 +15,8 @@ public interface TournamentRepository extends MongoRepository<Tournament, String
     List<Tournament> findByStatusIn(List<String> statuses);
 
     List<Tournament> findByRegisteredPlayersContaining(String cfHandle);
+
+    List<Tournament> findByRegisteredPlayersContainingOrCreatorId(String cfHandle, String creatorId);
+
+    List<Tournament> findByRegisteredPlayersContainingOrCreatorIdOrCreatorEmail(String cfHandle, String creatorId, String creatorEmail);
 }

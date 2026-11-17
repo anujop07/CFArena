@@ -17,6 +17,13 @@ public class JwtService {
     @Value("${JWT_SECRET}")
     private String SECRET;
 
+    @jakarta.annotation.PostConstruct
+    void validateSecret() {
+        if (SECRET == null || SECRET.getBytes().length < 32) {
+            throw new IllegalStateException("JWT_SECRET must be set and at least 32 bytes long");
+        }
+    }
+
     private Key getKey() {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
     }

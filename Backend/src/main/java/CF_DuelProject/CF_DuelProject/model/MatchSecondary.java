@@ -20,12 +20,21 @@ public class MatchSecondary {
     private String difficulty;
     private String user1;
     private String user2;
+
+    // Snapshot immutable Codeforces handles
+    private String player1CFHandle;
+    private String player2CFHandle;
+    private String player1Id;
+    private String player2Id;
+    private int durationMinutes;
+
     private int score1;
     private int score2;
     private List<String> problems;
     private int curIdx;
     private String status; 
     private String winnerId;
+    private String endedReason;
     private Date startTime;
     private Date endTime;
     @Indexed(unique = true)
@@ -37,4 +46,18 @@ public class MatchSecondary {
     private String tournamentId;
     private int bracketRound;
 
+    public String getPlayer1CFHandle() {
+        if (player1CFHandle != null && !player1CFHandle.isBlank()) {
+            return player1CFHandle;
+        }
+        return user1;
+    }
+
+    public String getPlayer2CFHandle() {
+        if (player2CFHandle != null && !player2CFHandle.isBlank()) {
+            return player2CFHandle;
+        }
+        return user2;
+    }
 }
+

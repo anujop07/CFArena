@@ -30,6 +30,13 @@ public class AuthController {
             req.getPassword() == null || req.getPassword().length() < 6) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid email or password (min 6 chars)"));
         }
+        // bcrypt only uses the first 72 bytes; reject absurd sizes instead of hashing megabytes
+        if (req.getPassword().length() > 72 || req.getEmail().length() > 254
+                || !req.getEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+                || (req.getName() != null && req.getName().length() > 100)
+                || (req.getCfHandle() != null && req.getCfHandle().length() > 40)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid registration details"));
+        }
         try {
             authService.register(req);
             return ResponseEntity.ok(Map.of("message", "User registered successfully"));

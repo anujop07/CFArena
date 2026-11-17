@@ -33,9 +33,23 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // Allow both frontendUrl and standard variants (http, https, duckdns, localhost)
+        List<String> origins = new java.util.ArrayList<>();
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origins.add(frontendUrl);
+            if (frontendUrl.startsWith("http://")) {
+                origins.add("https://" + frontendUrl.substring(7));
+            } else if (frontendUrl.startsWith("https://")) {
+                origins.add("http://" + frontendUrl.substring(8));
+            }
+        }
+        origins.add("https://cpduel.duckdns.org");
+        origins.add("http://cpduel.duckdns.org");
+        origins.add("http://localhost:5173");
+        origins.add("http://localhost:3000");
+
         CorsConfiguration config = new CorsConfiguration();
-        // ✅ Only allow the actual frontend domain — no wildcards in production
-        config.setAllowedOriginPatterns(List.of(frontendUrl));
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
@@ -61,7 +75,7 @@ public class SecurityConfig {
                 // We still use JWT for API authentication.
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/oauth2/**", "/login/**", "/ws/**").permitAll()
+                        .requestMatchers("/auth/**", "/api/auth/**", "/oauth2/**", "/login/**", "/ws/**", "/error").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/tournament/active",

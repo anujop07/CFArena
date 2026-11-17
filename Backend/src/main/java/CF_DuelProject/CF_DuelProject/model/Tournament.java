@@ -25,11 +25,13 @@ public class Tournament {
 
     private String name;                         // "Weekend Blitz Cup"
     private String creatorId;                    // cfHandle of creator
+    private String creatorEmail;                 // email of creator
     private String difficulty;                   // "EASY", "MEDIUM", or "HARD"
     private int maxPlayers;                      // 8, 16, 32
     private int matchDurationMinutes;            // per match
 
     private List<String> registeredPlayers = new ArrayList<>();
+    private List<String> joinRequests = new ArrayList<>();
 
     private String status;                       // REGISTRATION, ONGOING, FINISHED, CANCELLED
 
@@ -43,6 +45,10 @@ public class Tournament {
 
     private int currentRound;
     private int totalRounds;                     // log2(maxPlayers)
+
+    // Shared round timing for all matches in current round
+    private Date roundStartTime;
+    private Date roundEndTime;
 
     @Indexed(unique = true)
     private String inviteCode;                   // tournament sharing code

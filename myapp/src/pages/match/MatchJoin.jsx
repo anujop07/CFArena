@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { API_PATHS } from '../../utils/apiPaths'
@@ -47,6 +47,16 @@ export default function MatchJoin() {
   const [isJoining, setIsJoining] = useState(false)
   const [joinError, setJoinError] = useState(null)
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    axiosInstance.get(API_PATHS.USER.ME)
+      .then((res) => {
+        if (!res.data?.codeforcesVerified) {
+          setJoinError('Your Codeforces account is not verified. Please connect your Codeforces account via OIDC before joining a match.')
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const showToast = (text, type = 'ok') => {
     setToast({ text, type })

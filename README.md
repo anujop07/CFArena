@@ -1,272 +1,193 @@
-# 🚀 CF Duel – Competitive Programming Battle Platform
+# ⚔️ CF Arena — Competitive Programming Battle & Tournament Platform
 
-A full-stack web application that allows users to compete in real-time coding duels using problems inspired by Codeforces. The platform supports authentication, match creation, live tracking, per-question scoring, and a dynamic leaderboard.
+A full-stack real-time competitive programming platform where developers duel head-to-head on algorithmic problems and compete in single-elimination tournament brackets. Features cryptographic identity verification via **Codeforces OAuth 2.0 / OpenID Connect (OIDC)**, immutable match handle snapshotting, live WebSocket contest tracking, and submission evaluation.
 
 ---
 
-## 📌 Features
+## 📌 Key Features
 
-### 🔐 Authentication
-
-* JWT-based authentication system
-* Google OAuth login support
-* Secure route protection
-* Session handling after login
+### 🔐 Authentication & Identity Verification
+- **Dual Authentication**: Secure email/password login and Google OAuth 2.0 with JWT tokens.
+- **Codeforces OIDC Verification**: Direct cryptographic identity linking using Codeforces OAuth 2.0 / OIDC (`authorization_code` flow + signed ID token claim validation).
+- **Anti-Impersonation & Duplicate Protection**: Prevents claiming arbitrary handles. Every Codeforces subject and handle can only be linked to a single CF Arena account.
+- **Active Match Protection**: Prevents handle re-linking or switching while in an active duel or tournament match.
+- **Match Handle Snapshotting**: Snapshots immutable `player1CFHandle` and `player2CFHandle` into the match document at creation/join time to prevent mid-match handle tampering.
 
 ### ⚔️ Duel System
+- Real-time 1v1 duels with custom durations (15m, 30m, 45m, 60m) and difficulty tiers (`EASY`, `MEDIUM`, `HARD`).
+- Live WebSocket match synchronization and real-time score updates.
+- Time-bounded submission evaluation: checks only Codeforces submissions with `verdict == OK` made strictly after `startTime` and before `endTime`.
 
-* Create or join coding matches
-* Multiple players per match
-* Questions assigned per match
-* Real-time match tracking
-
-### 🧠 Problem System
-
-* Fetch problems via backend API
-* Each problem has a unique ID
-* Problems tracked individually per player
-
-### 📊 Scoring System
-
-* Per-question tracking for each player
-* Status:
-
-  * ✅ Solved
-  * — Not attempted
-* Solving one question does NOT affect others
-* Leaderboard updates dynamically
-
-### 🔴 Live Question Logic
-
-* Only current question shows **"LIVE"**
-* Previous questions:
-
-  * Either "Solved" or "Open"
-  * No "LIVE" tag
-
-### 📈 Leaderboard
-
-* Displays:
-
-  * Player names
-  * Questions solved
-  * Score comparison
-* Visual indicators (e.g., red/green bars)
-
-### 🎨 Frontend UI
-
-* Clean dashboard interface
-* Dynamic components (React/Vue)
-* Toast notifications
-* Responsive design
-
-### ☁️ Deployment
-
-* Frontend: Vercel
-* Backend: Render
-* Database: MongoDB Atlas
+### 🏆 Tournament Bracket System
+- Single-elimination tournament brackets (8, 16, 32 players).
+- Automated round generation, match lobby creation, and bracket progression.
 
 ---
 
-## 🏗️ Tech Stack
+## 🏗️ Architecture & Tech Stack
 
-### Frontend
-
-* Vue.js / React (depending on your build)
-* HTML, CSS, JavaScript
-* Axios for API calls
-
-### Backend
-
-* Spring Boot (Java)
-* REST APIs
-* JWT Authentication
-* OAuth integration
-
-### Database
-
-* MongoDB Atlas
-
-### Deployment
-
-* Vercel (Frontend)
-* Render (Backend)
+- **Frontend**: React (Vite), Axios, Tailwind/Custom CSS with responsive monospace UI.
+- **Backend**: Java 17, Spring Boot 3.x, Spring Security, RestTemplate, Nimbus JOSE+JWT / JJWT.
+- **Database**: MongoDB (Atlas or local instance).
+- **Protocol**: REST APIs + WebSockets / STOMP.
+- **Deployment**: Docker & Docker Compose.
 
 ---
 
 ## 📂 Project Structure
 
 ```
-CF-Duel/
-│
-├── frontend/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   └── App.vue / App.js
-│
-├── backend/
-│   ├── controller/
-│   ├── service/
-│   ├── model/
-│   ├── repository/
-│   └── config/
-│
-├── database/
-│   └── schemas
-│
+CFArena/
+├── Backend/
+│   ├── src/main/java/CF_DuelProject/
+│   │   ├── config/             # Security, CORS, WebSocket configs
+│   │   ├── controller/         # REST API Controllers (Auth, Codeforces, Match, Tournament, User)
+│   │   ├── model/              # User, MatchPrimary, MatchSecondary, Tournament, Submission
+│   │   ├── repository/         # Spring Data MongoDB Repositories
+│   │   └── service/            # CodeforcesOidcService, MatchService, TournamentService, UserService
+│   ├── src/main/resources/
+│   │   └── application.properties # Spring configuration with env-var fallbacks
+│   └── .env.example
+├── myapp/                      # React Frontend (Vite)
+│   ├── src/
+│   │   ├── components/         # Navbar (with CF connect modal & verified badge), widgets
+│   │   ├── context/            # AuthContext
+│   │   ├── pages/              # Auth, Dashboard, Match Create/Join/Room, Tournament
+│   │   └── utils/              # apiPaths, axiosInstance, cfApi
+│   └── .env.example
+├── docker-compose.yml          # Production compose file
+├── .env.example                # Root environment template
 └── README.md
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Configuration & Environment Variables
 
-### 🔧 Prerequisites
+### Backend (`Backend/.env` or Docker environment)
 
-* Node.js
-* Java (JDK 17+)
-* MongoDB Atlas account
-* Git
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/cf_duel_db` |
+| `MONGODB_DATABASE` | MongoDB database name | `cf_duel_db` |
+| `JWT_SECRET` | Secret key for signing CF Arena JWTs | `your_jwt_secret_min_256_bits` |
+| `FRONTEND_URL` | Frontend URL for CORS and redirects | `http://localhost:5173` |
+| `GOOGLE_CLIENT_ID` | Google OAuth2 Client ID | `your_google_client_id` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 Client Secret | `your_google_client_secret` |
+| `GOOGLE_REDIRECT_URI` | Google OAuth2 Redirect URI | `http://localhost:8080/login/oauth2/code/google` |
+| `CODEFORCES_CLIENT_ID` | Codeforces OAuth 2.0 / OIDC Client ID | `your_codeforces_client_id` |
+| `CODEFORCES_CLIENT_SECRET` | Codeforces OAuth 2.0 / OIDC Client Secret | `your_codeforces_client_secret` |
+| `CODEFORCES_REDIRECT_URI` | Backend Callback URL for Codeforces OIDC | `http://localhost:8080/api/auth/codeforces/callback` |
+| `CODEFORCES_AUTH_URL` | Codeforces Authorization Endpoint | `https://codeforces.com/oauth/authorize` |
+| `CODEFORCES_TOKEN_URL` | Codeforces Token Endpoint | `https://codeforces.com/oauth/token` |
+| `CODEFORCES_ISSUER` | Expected OIDC Issuer (`iss`) | `https://codeforces.com` |
+| `CODEFORCES_JWKS_URL` | Codeforces JWKS Endpoint (if verifying via keyset) | `https://codeforces.com/oauth/jwks` |
+
+### Frontend (`myapp/.env`)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | Backend API base URL | `http://localhost:8080` |
+| `VITE_WS_URL` | WebSocket server base URL | `http://localhost:8080` |
 
 ---
 
-### 🖥️ Backend Setup
+## 🚀 Running Locally
 
+### 1. Backend
 ```bash
-cd backend
-```
-
-1. Configure `application.properties`:
-
-```
-spring.data.mongodb.uri=YOUR_MONGO_URI
-jwt.secret=YOUR_SECRET_KEY
-```
-
-2. Run backend:
-
-```bash
+cd Backend
+cp .env.example .env
+# Edit .env with your credentials
 mvn spring-boot:run
 ```
 
----
-
-### 🌐 Frontend Setup
-
+### 2. Frontend
 ```bash
-cd frontend
+cd myapp
+cp .env.example .env
 npm install
 npm run dev
 ```
 
 ---
 
-## 🔑 Authentication Flow
+## 🔄 Authentication & Codeforces OIDC Flow
 
-1. User logs in via:
-
-   * Email/Password OR Google OAuth
-2. Backend generates JWT
-3. JWT stored in frontend (localStorage)
-4. All protected routes require token
-
----
-
-## 🔄 API Endpoints
-
-### 🔐 Auth
-
-```
-POST /auth/login
-POST /auth/register
-GET  /auth/oauth/google
-```
-
-### 🧠 Problems
-
-```
-GET /getProblems/{matchId}
-```
-
-### ⚔️ Match
-
-```
-POST /match/create
-POST /match/join
-GET  /match/{matchId}
-```
-
-### 📊 Submission
-
-```
-POST /submit
+```text
+[User]                 [CF Arena Frontend]            [CF Arena Backend]           [Codeforces OIDC Provider]
+  │                             │                              │                               │
+  │─── Click "Connect CF" ─────▶│                              │                               │
+  │                             │─── GET /api/auth/codeforces ─▶                               │
+  │                             │    (with JWT Bearer token)   │─── Generate state & nonce ───▶│
+  │                             │                              │    (Store in memory / 5m TTL) │
+  │                             │◀── Return authUrl ───────────│                               │
+  │◀── Redirect to CF OAuth ────│                              │                               │
+  │                                                                                            │
+  │─── Approve Application on Codeforces ─────────────────────────────────────────────────────▶│
+  │                                                                                            │
+  │◀── Redirect to Callback URL with ?code=...&state=... ──────────────────────────────────────│
+  │                             │                              │                               │
+  │                             │                              │─── POST /oauth/token ────────▶│
+  │                             │                              │◀── Return id_token & tokens ──│
+  │                             │                              │                               │
+  │                             │                              │─── Validate id_token ─────────┤
+  │                             │                              │    • Verify iss & aud         │
+  │                             │                              │    • Verify exp & nonce       │
+  │                             │                              │    • Extract subject & handle │
+  │                             │                              │    • Check duplicate claims   │
+  │                             │                              │    • Check active match lock  │
+  │                             │                              │                               │
+  │                             │                              │─── Update User Document ──────┤
+  │                             │                              │    • codeforcesHandle         │
+  │                             │                              │    • codeforcesVerified=true  │
+  │                             │                              │    • codeforcesSubject        │
+  │                             │                              │    • codeforcesVerifiedAt     │
+  │                             │                              │                               │
+  │◀── Redirect to Dashboard with ?cf_verified=true ───────────│                               │
 ```
 
 ---
 
-## 🧮 Scoring Logic
+## 🧪 Verification & Test Scenarios
 
-* Each player has:
+### Scenario 1: Unverified User Match Creation Blocked
+- Attempt to create a match via `POST /match/create` without verified Codeforces handle.
+- **Expected**: Backend responds with `400 Bad Request: "Codeforces account not verified. Please connect your Codeforces account before creating a match."` Frontend shows notification guiding user to connect CF.
 
-```json
-{
-  "playerId": "user1",
-  "questions": {
-    "Q1": "Solved",
-    "Q2": "-",
-    "Q3": "-"
-  }
-}
-```
+### Scenario 2: Unverified User Match Join Blocked
+- Attempt to join a match via `POST /match/join?inviteCode=...` without verified Codeforces handle.
+- **Expected**: Backend responds with `400 Bad Request: "Codeforces account not verified. Please connect your Codeforces account before joining a match."`
 
-* Rules:
+### Scenario 3: Successful Codeforces OIDC Account Linking
+- Initiate OIDC flow via `GET /api/auth/codeforces`. Complete consent on Codeforces.
+- **Expected**: Codeforces returns authorization code; backend exchanges for `id_token`, validates claims, sets `codeforcesVerified = true`, `codeforcesHandle = <handle>`, `codeforcesSubject = <sub>`. User is redirected to `/dashboard?cf_verified=true` and verified badge is displayed.
 
-  * Solving Q1 → Only Q1 becomes "Solved"
-  * Other questions remain `—`
-  * No auto-fill or propagation
+### Scenario 4: Duplicate Handle / Subject Protection
+- User A links Codeforces handle `handleX`.
+- User B logs in and attempts to link the same Codeforces account `handleX`.
+- **Expected**: Backend rejects linking with `409 Conflict: "This Codeforces account is already linked to another CF Arena user."`
 
----
+### Scenario 5: Handle Change During Active Match Blocked
+- User is currently participating in a match with status `WAITING`, `READY`, or `ONGOING`.
+- User attempts to link a different Codeforces account or re-authenticate.
+- **Expected**: Backend rejects linking with `400 Bad Request: "Cannot change or link Codeforces account while participating in an active match."`
 
-## 🧪 Testing (Postman)
+### Scenario 6: Match Handle Snapshotting & Tamper Resistance
+- User A (`handleA`) and User B (`handleB`) create and join a match lobby.
+- `MatchPrimary` and `MatchSecondary` store snapshots `player1CFHandle = "handleA"`, `player2CFHandle = "handleB"`.
+- Any subsequent profile change does not affect the active match; submission checks strictly verify `handleA` and `handleB`.
 
-### Steps:
+### Scenario 7: Time-Bounded & Problem-Specific Submission Validation
+- Submission check polls Codeforces `user.status` for the match problem ID.
+- Submissions before match `startTime` or with verdict $\ne$ `OK` are ignored.
+- Only a submission with `verdict == OK`, matching problem ID, by the snapshotted handle, created at $\ge startTime$ triggers a problem solve.
 
-1. Login → get JWT
-2. Add token in headers:
-
-```
-Authorization: Bearer <token>
-```
-
-3. Test endpoints:
-
-   * Create match
-   * Join match
-   * Fetch problems
-   * Submit solution
+### Scenario 8: Tournament Creation & Registration Protection
+- Unverified users are rejected when attempting to create a tournament or register for an open bracket.
+- Registered tournament matches snapshot player handles directly into match lobbies.
 
 ---
 
-## 🚀 Deployment
-
-### Frontend (Vercel)
-
-* Connect GitHub repo
-* Auto-deploy on push
-
-### Backend (Render)
-
-* Keep service running
-* Use environment variables for secrets
-
----
-
-
-## 👩‍💻 Author
-
-Developed as part of a competitive coding platform project to improve real-time problem solving and system design skills.
-
----
-
-⭐ If you like this project, give it a star!
+## 📄 License
+MIT License.

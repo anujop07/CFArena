@@ -1,6 +1,9 @@
 # ─── Secrets — ABSOLUTE NO-GO ─────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
+!Backend/.env.example
+!myapp/.env.example
 *.pem
 *.key
 *.p12
@@ -25,3 +28,4 @@ myapp/.DS_Store
 *.sw?
 .DS_Store
 Thumbs.db
+*.zip

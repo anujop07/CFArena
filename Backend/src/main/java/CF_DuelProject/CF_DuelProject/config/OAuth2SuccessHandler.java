@@ -37,6 +37,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String email = oAuth2User.getAttribute("email");
+        Boolean emailVerified = oAuth2User.getAttribute("email_verified");
+        if (email == null || email.isBlank() || !Boolean.TRUE.equals(emailVerified)) {
+            log.warn("OAuth2 login rejected: e-mail missing or not verified by Google");
+            getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/login");
+            return;
+        }
         String name  = oAuth2User.getAttribute("name");
 
         // Find existing user or create a new one via Google OAuth
@@ -46,13 +52,15 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                     u.setEmail(email);
                     u.setName(name);
                     u.setProvider("GOOGLE");
+                    u.setCodeforcesVerified(false);
                     return userRepository.save(u);
                 });
 
         log.info("OAuth2 login success for user: {}", email);
 
         String token = jwtService.generateToken(email);
-        String redirectUrl = frontendUrl + "/auth/callback?token=" + token;
+        // URL fragment: browsers never send it to servers, proxies or in Referer headers, so it stays out of access logs.
+        String redirectUrl = frontendUrl + "/auth/callback#token=" + token;
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }

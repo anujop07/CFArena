@@ -32,9 +32,16 @@ public class AuthService {
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setProvider("LOCAL");
-        user.setCfHandle(req.getCfHandle());
+        user.setCfHandle(req.getCfHandle() != null ? req.getCfHandle().trim() : null);
+        user.setCodeforcesVerified(false);
 
-        userRepository.save(user);
+        user.setCodeforcesVerifiedAt(null);
+
+        try {
+            userRepository.save(user);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new RuntimeException("User exists");
+        }
     }
 
     public String login(AuthRequest req) {

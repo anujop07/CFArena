@@ -31,6 +31,15 @@ services:
       JWT_SECRET:         ${JWT_SECRET}
       FRONTEND_URL:       ${FRONTEND_URL}
       BOOTSTRAP_SECRET:   ${BOOTSTRAP_SECRET}
+      ADMIN_EMAILS:       ${ADMIN_EMAILS:-}
+      TOURNAMENT_ADMIN_ONLY: ${TOURNAMENT_ADMIN_ONLY:-true}
+      CODEFORCES_CLIENT_ID:     ${CODEFORCES_CLIENT_ID:-}
+      CODEFORCES_CLIENT_SECRET: ${CODEFORCES_CLIENT_SECRET:-}
+      CODEFORCES_REDIRECT_URI:  ${CODEFORCES_REDIRECT_URI:-http://localhost:8080/api/auth/codeforces/callback}
+      CODEFORCES_AUTH_URL:      ${CODEFORCES_AUTH_URL:-https://codeforces.com/oauth/authorize}
+      CODEFORCES_TOKEN_URL:     ${CODEFORCES_TOKEN_URL:-https://codeforces.com/oauth/token}
+      CODEFORCES_ISSUER:        ${CODEFORCES_ISSUER:-https://codeforces.com}
+      CODEFORCES_JWKS_URL:      ${CODEFORCES_JWKS_URL:-https://codeforces.com/oauth/jwks}
 
     # ✅ Health check — Docker monitors this endpoint.
     # Container is only marked "healthy" when Spring Boot is fully started.
